@@ -1,16 +1,12 @@
 import { useState } from "react";
-import ComponenteBlock from "./ComponenteBlock.jsx";
-import { COMPONENTES, ESTADO_DIRECTOR } from "../utils/constantes.js";
-import {
-  aprobarComponenteDirector,
-  enviarSugerenciaDirector,
-} from "../services/asignaturas.js";
+import ContenidoAsignatura from "./ContenidoAsignatura.jsx";
+import { ESTADO_DIRECTOR, listarComponentes } from "../utils/constantes.js";
 
 export default function AsignaturaCard({ asignatura }) {
   const [abierta, setAbierta] = useState(false);
 
   const componentes = asignatura.componentes || {};
-  const pendientes = COMPONENTES.filter(
+  const pendientes = listarComponentes(componentes).filter(
     (c) => (componentes[c.clave]?.estadoDirector || ESTADO_DIRECTOR.PENDIENTE) === ESTADO_DIRECTOR.PENDIENTE
   ).length;
 
@@ -19,32 +15,26 @@ export default function AsignaturaCard({ asignatura }) {
       <button
         type="button"
         onClick={() => setAbierta((v) => !v)}
+        aria-expanded={abierta}
         className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
       >
         <span className="font-semibold text-slate-800 dark:text-slate-100">
-          {asignatura.nombre}
+          Asignatura: {asignatura.nombre}
         </span>
         <span className="flex shrink-0 items-center gap-3">
-          {pendientes > 0 && (
-            <span className="badge-pending">{pendientes} por revisar</span>
-          )}
+          {pendientes > 0 && <span className="badge-pending">{pendientes} por revisar</span>}
           <span className="text-slate-400">{abierta ? "▲" : "▼"}</span>
         </span>
       </button>
 
       {abierta && (
-        <div className="space-y-3 border-t border-slate-200 p-5 dark:border-slate-700">
-          {COMPONENTES.map(({ clave, etiqueta }) => (
-            <ComponenteBlock
-              key={clave}
-              etiqueta={etiqueta}
-              componente={componentes[clave]}
-              onAprobar={() => aprobarComponenteDirector(asignatura.id, clave)}
-              onEnviarSugerencia={(texto) =>
-                enviarSugerenciaDirector(asignatura.id, clave, texto)
-              }
-            />
-          ))}
+        <div className="border-t border-slate-200 p-5 dark:border-slate-700">
+          <ContenidoAsignatura asignatura={asignatura} rol="director" />
+          <div className="mt-6 flex justify-center border-t border-slate-200 pt-4 dark:border-slate-700">
+            <button type="button" className="btn-secondary" onClick={() => setAbierta(false)}>
+              ▲ Recoger
+            </button>
+          </div>
         </div>
       )}
     </div>

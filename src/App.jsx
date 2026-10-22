@@ -25,7 +25,7 @@ export default function App() {
     <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-900 px-4 text-center">
       <p className="text-slate-600 dark:text-slate-300">
         Tu cuenta no tiene un rol reconocido en el sistema. Contacta al
-        administrador del Departamento de Pedagogía.
+        Director de Departamento de Pedagogía.
       </p>
     </div>
   );

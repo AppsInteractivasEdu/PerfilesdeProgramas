@@ -1,4 +1,4 @@
-import { jsPDF } from "jspdf";
+﻿import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
 function encabezado(documento, titulo, subtitulo) {
@@ -54,7 +54,7 @@ export function exportarPdfAdmin(filas, nombreArchivo) {
         "Componente",
         "Comentario del director",
         "Estado",
-        "Comentario del administrador",
+        "Comentario del Director de Departamento",
       ],
     ],
     body: filas.map((f) => [
@@ -79,3 +79,4 @@ export function exportarPdfAdmin(filas, nombreArchivo) {
 
   documento.save(nombreArchivo);
 }
+

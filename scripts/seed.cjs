@@ -1,7 +1,8 @@
 /**
- * Carga inicial de datos en Firebase: crea los 11 usuarios (10 directores +
- * admin) en Authentication, el catálogo de programas y las asignaturas con
- * sus 4 componentes, leyendo data/tabla_resultado.xlsx.
+ * Carga inicial de datos en Firebase: crea los usuarios (directores + admin)
+ * en Authentication, el catálogo de programas y las asignaturas con todos sus
+ * componentes (pregrado, posgradual, experiencia, competencias 1..N e
+ * idoneidad), leyendo data/tabla_resultado.xlsx.
  *
  * Requiere, en la raíz del proyecto:
  *   - serviceAccountKey.json  (Firebase Console > Configuración del proyecto
@@ -13,12 +14,12 @@ const fs = require("fs");
 const path = require("path");
 const admin = require("firebase-admin");
 const XLSX = require("xlsx");
+const { leerAsignaturas, componenteNuevo, normalizarTexto } = require("./lib_excel.cjs");
 
 const RAIZ = path.resolve(__dirname, "..");
 const RUTA_SERVICE_ACCOUNT = path.join(RAIZ, "serviceAccountKey.json");
 const RUTA_CREDENCIALES = path.join(__dirname, "credenciales.json");
 const RUTA_EXCEL = path.join(RAIZ, "data", "tabla_resultado.xlsx");
-const COLUMNAS = { programa: 0, asignatura: 1, pregrado: 2, posgradual: 3, experiencia: 4, competencias: 5 };
 
 function salirConError(mensaje) {
   console.error(`\n✖ ${mensaje}\n`);
@@ -67,7 +68,7 @@ async function crearOActualizarUsuario({ email, password, rol, programaId, nombr
     rol,
     programaId: programaId || null,
     nombrePrograma: nombrePrograma || null,
-    nombre: rol === "admin" ? "Administrador" : `Dirección de ${nombrePrograma}`,
+    nombre: rol === "admin" ? "Director de Departamento" : `Dirección de ${nombrePrograma}`,
   });
 }
 
@@ -89,100 +90,42 @@ async function crearProgramas() {
   console.log(`  ${porNombrePrograma.size} programas.`);
 }
 
-function normalizar(texto) {
-  return texto
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function celda(hoja, fila, col) {
-  const ref = XLSX.utils.encode_cell({ r: fila, c: col });
-  const valor = hoja[ref]?.v;
-  return typeof valor === "string" ? valor.trim() : valor ?? "";
-}
-
-function construirComponente(valor) {
-  return {
-    valor: valor || "",
-    estadoDirector: "pendiente",
-    comentarioDirector: "",
-    fechaDirector: null,
-    estadoAdmin: "pendiente",
-    comentarioAdmin: "",
-    fechaAdmin: null,
-  };
-}
-
 async function cargarAsignaturas() {
   console.log("\n3) Cargando asignaturas desde tabla_resultado.xlsx…");
   console.log(
-    "   (el script es seguro de re-ejecutar: una asignatura que ya existe " +
-      "solo actualiza su nombre/orden, nunca borra aprobaciones o sugerencias ya guardadas)"
+    "   (seguro de re-ejecutar: una asignatura que ya existe solo actualiza " +
+      "nombre/orden; para actualizar textos usa scripts/sincronizar_textos.cjs)"
   );
-  const libro = XLSX.readFile(RUTA_EXCEL);
-  let totalNuevas = 0;
-  let totalActualizadas = 0;
-  let totalHojas = 0;
+  let nuevas = 0;
+  let existentes = 0;
 
-  for (const nombreHoja of libro.SheetNames) {
-    const hoja = libro.Sheets[nombreHoja];
-    const rango = XLSX.utils.decode_range(hoja["!ref"]);
-    let nuevasHoja = 0;
-    let actualizadasHoja = 0;
-
-    for (let fila = rango.s.r + 1; fila <= rango.e.r; fila++) {
-      const nombrePrograma = celda(hoja, fila, COLUMNAS.programa);
-      const nombreAsignatura = celda(hoja, fila, COLUMNAS.asignatura);
-      if (!nombrePrograma || !nombreAsignatura) continue;
-
-      const credencial = porNombrePrograma.get(nombrePrograma);
-      if (!credencial) {
-        console.warn(
-          `  ⚠ Programa "${nombrePrograma}" (hoja "${nombreHoja}") no está en credenciales.json; se omite esa fila.`
-        );
-        continue;
-      }
-
-      // ID determinístico: re-ejecutar el script no duplica filas.
-      const docId = `${credencial.programaId}__${normalizar(nombreAsignatura)}`;
-      const ref = db.collection("asignaturas").doc(docId);
-      const existente = await ref.get();
-
-      if (existente.exists) {
-        await ref.update({
-          programaId: credencial.programaId,
-          nombrePrograma,
-          nombre: nombreAsignatura,
-          orden: fila,
-        });
-        actualizadasHoja++;
-      } else {
-        await ref.set({
-          programaId: credencial.programaId,
-          nombrePrograma,
-          nombre: nombreAsignatura,
-          orden: fila,
-          componentes: {
-            pregrado: construirComponente(celda(hoja, fila, COLUMNAS.pregrado)),
-            posgradual: construirComponente(celda(hoja, fila, COLUMNAS.posgradual)),
-            experiencia: construirComponente(celda(hoja, fila, COLUMNAS.experiencia)),
-            competencias: construirComponente(celda(hoja, fila, COLUMNAS.competencias)),
-          },
-        });
-        nuevasHoja++;
-      }
+  for (const f of leerAsignaturas(XLSX.readFile(RUTA_EXCEL))) {
+    const credencial = porNombrePrograma.get(f.nombrePrograma);
+    if (!credencial) {
+      console.warn(`  ⚠ Programa "${f.nombrePrograma}" (hoja "${f.nombreHoja}") no está en credenciales.json; se omite.`);
+      continue;
     }
-    console.log(`  ${nombreHoja}: ${nuevasHoja} nuevas, ${actualizadasHoja} ya existían`);
-    totalNuevas += nuevasHoja;
-    totalActualizadas += actualizadasHoja;
-    totalHojas++;
+    const docId = `${credencial.programaId}__${normalizarTexto(f.nombreAsignatura)}`;
+    const ref = db.collection("asignaturas").doc(docId);
+    const datosBase = {
+      programaId: credencial.programaId,
+      nombrePrograma: f.nombrePrograma,
+      nombre: f.nombreAsignatura,
+      orden: f.fila,
+    };
+    if ((await ref.get()).exists) {
+      await ref.update(datosBase);
+      existentes++;
+    } else {
+      const componentes = {};
+      for (const [clave, valor] of Object.entries(f.componentes)) {
+        componentes[clave] = componenteNuevo(valor);
+      }
+      await ref.set({ ...datosBase, componentes });
+      nuevas++;
+    }
   }
-  console.log(
-    `  Total: ${totalNuevas} asignaturas nuevas, ${totalActualizadas} existentes actualizadas, en ${totalHojas} hojas.`
-  );
+  console.log(`  Total: ${nuevas} asignaturas nuevas, ${existentes} ya existían.`);
 }
 
 async function main() {

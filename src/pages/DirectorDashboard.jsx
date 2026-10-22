@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import AsignaturaCard from "../components/AsignaturaCard.jsx";
 import { suscribirAsignaturasPorPrograma } from "../services/asignaturas.js";
-import { COMPONENTES, ESTADO_DIRECTOR } from "../utils/constantes.js";
+import { ESTADO_DIRECTOR, listarComponentes } from "../utils/constantes.js";
 import { exportarPdfDirector } from "../utils/exportPdf.js";
 
 export default function DirectorDashboard() {
@@ -24,7 +24,7 @@ export default function DirectorDashboard() {
   const filasModificar = useMemo(() => {
     const filas = [];
     for (const a of asignaturas) {
-      for (const { clave, etiqueta } of COMPONENTES) {
+      for (const { clave, etiqueta } of listarComponentes(a.componentes)) {
         const comp = a.componentes?.[clave];
         if (comp?.estadoDirector === ESTADO_DIRECTOR.MODIFICAR) {
           filas.push({
@@ -56,7 +56,7 @@ export default function DirectorDashboard() {
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
       <Navbar titulo={perfil?.nombrePrograma} subtitulo="Panel del director de programa" />
 
-      <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+      <main className="mx-auto w-full max-w-[2400px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <div className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold text-slate-800 dark:text-slate-100">

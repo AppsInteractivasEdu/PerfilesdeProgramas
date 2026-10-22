@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+﻿import * as XLSX from "xlsx";
 
 function descargarLibro(libro, nombreArchivo) {
   XLSX.writeFile(libro, nombreArchivo);
@@ -29,7 +29,7 @@ export function exportarExcelAdmin(filas, nombreArchivo) {
       Componente: f.componente,
       "Comentario del director": f.comentarioDirector,
       Estado: f.estadoAdmin,
-      "Comentario del administrador": f.comentarioAdmin || "",
+      "Comentario del Director de Departamento": f.comentarioAdmin || "",
     }))
   );
   hoja["!cols"] = [
@@ -44,3 +44,4 @@ export function exportarExcelAdmin(filas, nombreArchivo) {
   XLSX.utils.book_append_sheet(libro, hoja, "Consolidado");
   descargarLibro(libro, nombreArchivo);
 }
+
