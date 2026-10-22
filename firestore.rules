@@ -1,0 +1,65 @@
+rules_version = '2';
+
+// Reglas de seguridad para el aplicativo de Perfiles Docentes.
+// Modelo: usuarios/{uid} define el rol (director|admin) y, para directores,
+// el programaId al que pertenecen. asignaturas/{id} guarda el contenido y el
+// estado de revisión de cada uno de sus 4 componentes.
+//
+// Estas reglas son una base razonable para 11 usuarios conocidos (10
+// directores + 1 admin). Pruébalas en el "Rules Playground" de Firebase
+// Console antes de considerarlas definitivas.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function perfil() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function esAdmin() {
+      return autenticado() && perfil().rol == 'admin';
+    }
+
+    function esDirectorDelPrograma(programaId) {
+      return autenticado()
+        && perfil().rol == 'director'
+        && perfil().programaId == programaId;
+    }
+
+    // usuarios: cada quien lee solo su propio perfil; el admin puede leer todos.
+    // No hay escritura desde el cliente: los usuarios se crean con el script
+    // de carga (scripts/seed.cjs) usando el SDK de administrador.
+    match /usuarios/{uid} {
+      allow read: if autenticado() && (request.auth.uid == uid || esAdmin());
+      allow write: if false;
+    }
+
+    // programas: catálogo de solo lectura para cualquier usuario autenticado.
+    match /programas/{programaId} {
+      allow read: if autenticado();
+      allow write: if false;
+    }
+
+    // asignaturas: cada director ve y actualiza solo las de su programa;
+    // el admin ve y actualiza todas.
+    match /asignaturas/{asignaturaId} {
+      allow read: if esAdmin() || esDirectorDelPrograma(resource.data.programaId);
+
+      // El director solo puede tocar el mapa "componentes" (estado/comentario),
+      // nunca el contenido original ni a qué programa pertenece la fila.
+      allow update: if esAdmin() || (
+        esDirectorDelPrograma(resource.data.programaId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['componentes'])
+        && request.resource.data.nombre == resource.data.nombre
+        && request.resource.data.programaId == resource.data.programaId
+      );
+
+      allow create, delete: if false; // la carga inicial se hace con el script de administrador
+    }
+  }
+}

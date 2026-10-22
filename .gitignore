@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.local
+
+# Credenciales y claves — JAMAS se suben al repositorio
+scripts/credenciales.json
+serviceAccountKey.json
+*.serviceAccountKey.json
+
+# Sistema
+.DS_Store
+Thumbs.db
