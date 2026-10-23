@@ -43,9 +43,11 @@ export default function Login() {
       <main className="relative z-10 flex min-h-[calc(100vh-88px)] items-center justify-center px-4 py-10">
         <div className="card w-full max-w-md p-8">
           <div className="mb-6 flex items-center justify-between">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-institucional-gold to-amber-500 text-lg font-bold text-institucional-navyDark">
-              PD
-            </div>
+            <img
+              src="./logo-unimagdalena.png"
+              alt="Universidad del Magdalena"
+              className="h-14 w-14 object-contain"
+            />
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">
               Ciclo 2025-2026
             </span>
