@@ -53,7 +53,7 @@ export default function DirectorDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-300 dark:bg-slate-950">
       <Navbar titulo={perfil?.nombrePrograma} subtitulo="Panel del director de programa" />
 
       <main className="mx-auto w-full max-w-[2400px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">

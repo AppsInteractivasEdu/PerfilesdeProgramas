@@ -7,7 +7,7 @@
     @apply scroll-smooth;
   }
   body {
-    @apply bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-200;
+    @apply bg-slate-300 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200;
   }
   textarea,
   input {
@@ -26,10 +26,10 @@
     @apply btn bg-institucional-navy text-white hover:bg-institucional-navyDark dark:bg-institucional-gold dark:text-institucional-navyDark dark:hover:bg-amber-400;
   }
   .btn-approve {
-    @apply btn bg-institucional-navy text-white hover:bg-institucional-navyDark dark:bg-blue-700 dark:hover:bg-blue-600;
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-700;
   }
   .btn-modify {
-    @apply btn bg-slate-500 text-white hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500;
+    @apply btn bg-orange-500 text-white hover:bg-orange-600;
   }
   .btn-secondary {
     @apply btn bg-slate-200 text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600;
@@ -41,16 +41,16 @@
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
   .badge-pending {
-    @apply badge bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200;
+    @apply badge bg-sky-600 text-white;
   }
   .badge-approved {
-    @apply badge bg-blue-100 text-institucional-navy dark:bg-blue-900/50 dark:text-blue-200;
+    @apply badge bg-emerald-600 text-white;
   }
   .badge-modify {
-    @apply badge bg-slate-500 text-white dark:bg-slate-600;
+    @apply badge bg-orange-500 text-white;
   }
   .badge-rejected {
-    @apply badge bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300;
+    @apply badge bg-rose-600 text-white;
   }
   .field-label {
     @apply text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400;

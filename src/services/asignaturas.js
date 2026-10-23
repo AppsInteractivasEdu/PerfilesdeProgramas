@@ -120,6 +120,10 @@ export async function editarTextoComponente(asignaturaId, clave, texto) {
     [`componentes.${clave}.valor`]: texto,
     [`componentes.${clave}.fechaEdicion`]: serverTimestamp(),
   };
+  if (clave === "idoneidad") {
+    await updateDoc(ref, campos);
+    return;
+  }
   const sugerenciaAplicada =
     actual.estadoDirector === ESTADO_DIRECTOR.MODIFICAR && actual.estadoAdmin === ESTADO_ADMIN.APROBADO;
   const eraAprobado = actual.estadoDirector === ESTADO_DIRECTOR.APROBADO;

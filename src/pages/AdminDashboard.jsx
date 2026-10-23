@@ -140,7 +140,7 @@ export default function AdminDashboard() {
   const resumenSeleccionada = seleccionada ? resumenSolicitudes(seleccionada) : null;
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-300 dark:bg-slate-950">
       <Navbar
         titulo={`Panel del ${ROL_ADMIN_NOMBRE}`}
         subtitulo="Revisión de perfiles docentes de todos los programas"

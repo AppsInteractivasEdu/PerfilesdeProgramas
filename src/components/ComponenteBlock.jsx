@@ -52,12 +52,12 @@ function claseTarjeta(resaltar, estadoAdmin) {
   const base = "flex h-full flex-col rounded-xl border p-4 ";
   if (!resaltar) return base + "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800";
   if (estadoAdmin === ESTADO_ADMIN.APROBADO) {
-    return base + "border-institucional-navy bg-blue-50/60 ring-1 ring-blue-300 dark:border-blue-400 dark:bg-blue-900/10 dark:ring-blue-700";
+    return base + "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-300 dark:border-emerald-500 dark:bg-emerald-900/15 dark:ring-emerald-700";
   }
   if (estadoAdmin === ESTADO_ADMIN.RECHAZADO) {
     return base + "border-rose-400 bg-rose-50/60 ring-1 ring-rose-300 dark:border-rose-500 dark:bg-rose-900/10 dark:ring-rose-700";
   }
-  return base + "border-slate-500 bg-slate-100 ring-2 ring-slate-400 dark:border-slate-400 dark:bg-slate-700/40 dark:ring-slate-500";
+  return base + "border-orange-400 bg-orange-50 ring-2 ring-orange-300 dark:border-orange-500 dark:bg-orange-900/15 dark:ring-orange-700";
 }
 
 /**
@@ -123,7 +123,7 @@ export default function ComponenteBlock({
     <div className={claseTarjeta(esAdmin && pidioModificar, estadoAdmin)}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h4 className="font-semibold text-slate-800 dark:text-slate-100">{titulo}</h4>
-        {esAdmin ? (
+        {tipo === "idoneidad" ? null : esAdmin ? (
           <BadgeAdmin
             estadoDirector={estadoDirector}
             estadoAdmin={estadoAdmin}
@@ -166,9 +166,9 @@ export default function ComponenteBlock({
       )}
 
       {esAdmin && pidioModificar && (
-        <div className="mt-3 rounded-lg border border-slate-300 bg-slate-200/70 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700/60">
+        <div className="mt-3 rounded-lg border border-orange-300 bg-orange-100/80 px-3 py-2 text-sm dark:border-orange-700 dark:bg-orange-900/30">
           <p className="field-label">Sugerencia del director de programa</p>
-          <p className="mt-1 whitespace-pre-line text-slate-800 dark:text-slate-100">
+          <p className="mt-1 whitespace-pre-line text-slate-800 dark:text-orange-50">
             {componente?.comentarioDirector}
           </p>
         </div>
@@ -202,7 +202,7 @@ export default function ComponenteBlock({
               </button>
             )}
           </div>
-        ) : !editandoSugerencia ? (
+        ) : tipo === "idoneidad" ? null : !editandoSugerencia ? (
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-approve" onClick={onAprobar}>
               ✓ Aprobar

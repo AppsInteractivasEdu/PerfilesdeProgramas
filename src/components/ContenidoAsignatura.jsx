@@ -57,9 +57,13 @@ export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
       <Seccion titulo="Formación y experiencia" clases={clasesFijos}>
         {fijos.map(bloque)}
       </Seccion>
-      {competencias.length + idoneidad.length > 0 && (
-        <Seccion titulo="Competencias e idoneidad" clases={clasesCompetencias}>
+      {competencias.length > 0 && (
+        <Seccion titulo="Competencias" cantidad={competencias.length} clases={clasesCompetencias}>
           {competencias.map(bloque)}
+        </Seccion>
+      )}
+      {idoneidad.length > 0 && (
+        <Seccion titulo="Criterio de idoneidad" clases="">
           {idoneidad.map(bloque)}
         </Seccion>
       )}

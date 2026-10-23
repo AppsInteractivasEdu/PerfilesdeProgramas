@@ -35,7 +35,7 @@ export function partirCompetencia(valor = "") {
  * pregrado, posgradual, experiencia, competencias (comp1..N) e idoneidad.
  * El campo antiguo "competencias" (solo nombres) ya no se muestra.
  */
-export function listarComponentes(componentes = {}) {
+export function listarComponentes(componentes = {}, { incluirIdoneidad = true } = {}) {
   const lista = FIJOS.map((f) => ({ ...f, tipo: "fijo" }));
   Object.keys(componentes)
     .filter(esCompetencia)
@@ -44,7 +44,7 @@ export function listarComponentes(componentes = {}) {
       const [nombre] = partirCompetencia(componentes[clave]?.valor);
       lista.push({ clave, etiqueta: nombre || `Competencia ${clave.slice(4)}`, tipo: "competencia" });
     });
-  if (componentes[CLAVE_IDONEIDAD]) {
+  if (incluirIdoneidad && componentes[CLAVE_IDONEIDAD]) {
     lista.push({ clave: CLAVE_IDONEIDAD, etiqueta: ETIQUETA_IDONEIDAD, tipo: "idoneidad" });
   }
   return lista;

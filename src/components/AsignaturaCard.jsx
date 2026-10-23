@@ -6,7 +6,7 @@ export default function AsignaturaCard({ asignatura }) {
   const [abierta, setAbierta] = useState(false);
 
   const componentes = asignatura.componentes || {};
-  const pendientes = listarComponentes(componentes).filter(
+  const pendientes = listarComponentes(componentes, { incluirIdoneidad: false }).filter(
     (c) => (componentes[c.clave]?.estadoDirector || ESTADO_DIRECTOR.PENDIENTE) === ESTADO_DIRECTOR.PENDIENTE
   ).length;
 
@@ -16,12 +16,13 @@ export default function AsignaturaCard({ asignatura }) {
         type="button"
         onClick={() => setAbierta((v) => !v)}
         aria-expanded={abierta}
-        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+        className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-4"
       >
-        <span className="font-semibold text-slate-800 dark:text-slate-100">
+        <span aria-hidden="true" />
+        <span className="text-center font-semibold text-slate-800 dark:text-slate-100">
           Asignatura: {asignatura.nombre}
         </span>
-        <span className="flex shrink-0 items-center gap-3">
+        <span className="flex items-center justify-end gap-3">
           {pendientes > 0 && <span className="badge-pending">{pendientes} por revisar</span>}
           <span className="text-slate-400">{abierta ? "▲" : "▼"}</span>
         </span>
