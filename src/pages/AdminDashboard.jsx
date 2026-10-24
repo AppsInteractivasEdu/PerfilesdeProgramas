@@ -266,7 +266,14 @@ export default function AdminDashboard() {
               <select
                 aria-label="Filtrar por departamento"
                 value={departamentoFiltro}
-                onChange={(e) => setDepartamentoFiltro(e.target.value)}
+                onChange={(e) => {
+                  // Al cambiar de departamento se vuelve a "Todos los
+                  // programas": un departamento puede tener asignaturas en
+                  // varios programas a la vez, y dejar un programa puesto
+                  // escondería las demás.
+                  setDepartamentoFiltro(e.target.value);
+                  setProgramaFiltro("");
+                }}
                 className={CAMPO}
               >
                 <option value="">Todos los departamentos</option>
@@ -283,12 +290,19 @@ export default function AdminDashboard() {
                 placeholder="Buscar asignatura…"
                 className={CAMPO}
               />
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <label
+                className={
+                  "flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 text-sm font-semibold transition-colors " +
+                  (soloPendientes
+                    ? "border-orange-400 bg-orange-100 text-orange-700 dark:border-orange-500 dark:bg-orange-900/30 dark:text-orange-300"
+                    : "border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300")
+                }
+              >
                 <input
                   type="checkbox"
                   checked={soloPendientes}
                   onChange={(e) => setSoloPendientes(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300"
+                  className="h-4 w-4 rounded border-slate-300 accent-orange-500"
                 />
                 Solo con modificaciones por resolver
               </label>
