@@ -191,6 +191,15 @@ export default function AdminDashboard() {
 
   const resumenSeleccionada = seleccionada ? resumenSolicitudes(seleccionada) : null;
 
+  // Al seleccionar una asignatura (p. ej. desde el listado de "solo con
+  // modificaciones por resolver", viendo todos los programas a la vez), el
+  // filtro de programa se ajusta solo al de esa asignatura, para que los
+  // botones de descarga del consolidado queden habilitados de una vez.
+  const seleccionarAsignatura = (asignatura) => {
+    setSeleccionadaId(asignatura.id);
+    setProgramaFiltro(asignatura.programaId);
+  };
+
   return (
     <div className="min-h-screen bg-slate-300 dark:bg-slate-950">
       <Navbar
@@ -292,7 +301,7 @@ export default function AdminDashboard() {
                           <li key={asignatura.id}>
                             <button
                               type="button"
-                              onClick={() => setSeleccionadaId(asignatura.id)}
+                              onClick={() => seleccionarAsignatura(asignatura)}
                               aria-current={activa}
                               className={
                                 "flex w-full items-center justify-between gap-2 border-b border-slate-100 px-3 py-2.5 text-left text-sm transition-colors dark:border-slate-700/60 " +
