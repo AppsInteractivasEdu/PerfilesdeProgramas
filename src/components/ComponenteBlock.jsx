@@ -44,14 +44,18 @@ function claseTarjeta(resaltar) {
   return base + "border-orange-400 bg-orange-50 ring-2 ring-orange-300 dark:border-orange-500 dark:bg-orange-900/15 dark:ring-orange-700";
 }
 
-/** Bloque de revisión de UN revisor (director de programa, departamento o decano), para la vista del administrador. */
-function PanelRevisor({ revisor, rev, onAprobarModificacion, onRechazar }) {
+/**
+ * Bloque de revisión de UN revisor (director de programa, departamento o
+ * decano). Lo usa el admin (con Aprobar/Rechazar) y, en soloLectura, el
+ * decano para ver —sin poder resolver— las sugerencias de los demás.
+ */
+function PanelRevisor({ revisor, rev, onAprobarModificacion, onRechazar, soloLectura = false }) {
   const [mostrarRechazo, setMostrarRechazo] = useState(false);
   const estado = rev?.estado || ESTADO_REVISOR.PENDIENTE;
   const estadoAdmin = rev?.estadoAdmin || ESTADO_ADMIN.PENDIENTE;
   const pidioModificar = estado === ESTADO_REVISOR.MODIFICAR;
   const fueRechazado = pidioModificar && estadoAdmin === ESTADO_ADMIN.RECHAZADO;
-  const puedeResolver = pidioModificar && estadoAdmin === ESTADO_ADMIN.PENDIENTE;
+  const puedeResolver = !soloLectura && pidioModificar && estadoAdmin === ESTADO_ADMIN.PENDIENTE;
 
   return (
     <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700/80 dark:bg-slate-800/40">
@@ -102,6 +106,9 @@ function PanelRevisor({ revisor, rev, onAprobarModificacion, onRechazar }) {
 /**
  * rol="director" | "departamento" | "decano": vista de revisor único, con
  * botones Aprobar / Modificar sobre su propia revisión (prop revisorActivo).
+ * Para rol="decano" además se puede pasar revisoresSoloLectura (p. ej.
+ * ["director"]) para que vea, sin poder aprobar/rechazar, lo que opinaron
+ * los demás revisores de esa asignatura.
  * rol="admin": de SOLO LECTURA — muestra el texto original y la revisión de
  * cada revisor aplicable (prop revisoresAplicables), con Aprobar/Rechazar
  * para cada una. La edición del texto se hace aparte, en el recuadro
@@ -116,6 +123,7 @@ export default function ComponenteBlock({
   tituloContexto = "",
   revisorActivo,
   revisoresAplicables = [],
+  revisoresSoloLectura = [],
   onAprobar,
   onEnviarSugerencia,
   onAprobarModificacion,
@@ -166,6 +174,14 @@ export default function ComponenteBlock({
       <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">
         {cuerpo || "—"}
       </p>
+
+      {!esAdmin && revisoresSoloLectura.length > 0 && tipo !== "idoneidad" && (
+        <div className="mt-3 space-y-2">
+          {revisoresSoloLectura.map((revisor) => (
+            <PanelRevisor key={revisor} revisor={revisor} rev={revisiones[revisor]} soloLectura />
+          ))}
+        </div>
+      )}
 
       {esAdmin && tipo !== "idoneidad" && (
         <div className="mt-3 space-y-2">

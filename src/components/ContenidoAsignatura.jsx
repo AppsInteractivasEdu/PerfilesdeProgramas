@@ -32,6 +32,8 @@ const CAMPO_FILTRO =
  *
  * rol="director" | "departamento" | "decano": cada uno revisa su propia
  * columna de aprobaciones/sugerencias (prop "rol" hace también de revisor).
+ * El decano, además, ve en solo lectura lo que opinaron los demás revisores
+ * de esa asignatura (sin poder aprobar/rechazar esas otras revisiones).
  * rol="admin": el Director de Departamento ve, por componente, la revisión
  * de cada revisor aplicable (director de programa, departamento si existe, y
  * decano), con un filtro para ubicarse rápido en un componente concreto.
@@ -42,6 +44,9 @@ export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
   const esAdmin = rol === "admin";
   const revisorActivo = esAdmin ? null : rol;
   const revisoresAplicables = useMemo(() => revisoresDeAsignatura(asignatura), [asignatura]);
+  // El decano, además de su propia revisión, ve (sin poder aprobar/rechazar)
+  // lo que opinaron los demás revisores de esa asignatura.
+  const revisoresSoloLectura = rol === "decano" ? revisoresAplicables.filter((r) => r !== "decano") : [];
 
   const [filtroClave, setFiltroClave] = useState("todos");
   const filtrandoUnComponente = esAdmin && filtroClave !== "todos";
@@ -73,6 +78,7 @@ export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
       componente={componentes[clave]}
       revisorActivo={revisorActivo}
       revisoresAplicables={revisoresAplicables}
+      revisoresSoloLectura={revisoresSoloLectura}
       onAprobar={(revisor) => aprobarComponente(asignatura.id, clave, revisor)}
       onEnviarSugerencia={(revisor, texto) => enviarSugerencia(asignatura.id, clave, revisor, texto)}
       onAprobarModificacion={(revisor) => aprobarSolicitudAdmin(asignatura.id, clave, revisor)}
