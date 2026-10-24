@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar.jsx";
 import ContenidoAsignatura from "../components/ContenidoAsignatura.jsx";
 import {
+  suscribirDepartamentos,
   suscribirProgramas,
   suscribirTodasLasAsignaturas,
   suscribirUsuarios,
@@ -41,10 +42,12 @@ function resumenSolicitudes(asignatura) {
 
 export default function AdminDashboard() {
   const [programas, setProgramas] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]);
   const [asignaturas, setAsignaturas] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [programaFiltro, setProgramaFiltro] = useState("");
+  const [departamentoFiltro, setDepartamentoFiltro] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [soloPendientes, setSoloPendientes] = useState(false);
   const [seleccionadaId, setSeleccionadaId] = useState(null);
@@ -56,10 +59,12 @@ export default function AdminDashboard() {
       setCargando(false);
     });
     const d3 = suscribirUsuarios(setUsuarios);
+    const d4 = suscribirDepartamentos(setDepartamentos);
     return () => {
       d1();
       d2();
       d3();
+      d4();
     };
   }, []);
 
@@ -97,10 +102,11 @@ export default function AdminDashboard() {
     return conResumen.filter(
       (x) =>
         (!programaFiltro || x.asignatura.programaId === programaFiltro) &&
+        (!departamentoFiltro || x.asignatura.departamentoId === departamentoFiltro) &&
         (!q || x.asignatura.nombre.toLowerCase().includes(q)) &&
         (!soloPendientes || x.pendientes > 0)
     );
-  }, [conResumen, programaFiltro, busqueda, soloPendientes]);
+  }, [conResumen, programaFiltro, departamentoFiltro, busqueda, soloPendientes]);
 
   const grupos = useMemo(() => {
     const mapa = new Map();
@@ -192,12 +198,14 @@ export default function AdminDashboard() {
   const resumenSeleccionada = seleccionada ? resumenSolicitudes(seleccionada) : null;
 
   // Al seleccionar una asignatura (p. ej. desde el listado de "solo con
-  // modificaciones por resolver", viendo todos los programas a la vez), el
-  // filtro de programa se ajusta solo al de esa asignatura, para que los
-  // botones de descarga del consolidado queden habilitados de una vez.
+  // modificaciones por resolver", viendo todos los programas a la vez), los
+  // filtros de programa y departamento se ajustan solos a los de esa
+  // asignatura, para que los botones de descarga del consolidado queden
+  // habilitados de una vez y la lista quede ubicada donde corresponde.
   const seleccionarAsignatura = (asignatura) => {
     setSeleccionadaId(asignatura.id);
     setProgramaFiltro(asignatura.programaId);
+    setDepartamentoFiltro(asignatura.departamentoId || "");
   };
 
   return (
@@ -255,6 +263,19 @@ export default function AdminDashboard() {
                   </option>
                 ))}
               </select>
+              <select
+                aria-label="Filtrar por departamento"
+                value={departamentoFiltro}
+                onChange={(e) => setDepartamentoFiltro(e.target.value)}
+                className={CAMPO}
+              >
+                <option value="">Todos los departamentos</option>
+                {departamentos.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.nombre}
+                  </option>
+                ))}
+              </select>
               <input
                 type="search"
                 value={busqueda}
@@ -286,7 +307,7 @@ export default function AdminDashboard() {
                 grupos.map((g) => (
                   <div key={g.nombre}>
                     <div className="sticky top-0 z-[1] border-b border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800">
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                         {g.nombre} · {g.items.length}
                       </p>
                       <p className="text-[11px] text-slate-400 dark:text-slate-500">
@@ -340,7 +361,10 @@ export default function AdminDashboard() {
                     Asignatura: {seleccionada.nombre}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {seleccionada.nombrePrograma}
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                      {seleccionada.nombrePrograma}
+                      {seleccionada.nombreDepartamento && ` · ${seleccionada.nombreDepartamento}`}
+                    </span>
                     {" · "}
                     {resumenSeleccionada.total === 0
                       ? "Sin modificaciones solicitadas"

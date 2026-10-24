@@ -24,7 +24,7 @@ export default function AsignaturaCard({ asignatura, revisor = "director" }) {
         <span className="text-center font-semibold text-slate-800 dark:text-slate-100">
           Asignatura: {asignatura.nombre}
           {asignatura.nombrePrograma && (
-            <span className="block text-xs font-normal text-slate-400 dark:text-slate-500">
+            <span className="block text-xs font-semibold text-slate-900 dark:text-slate-100">
               {asignatura.nombrePrograma}
             </span>
           )}

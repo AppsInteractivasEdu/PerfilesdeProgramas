@@ -193,7 +193,7 @@ export default function DecanoDashboard() {
               ) : (
                 grupos.map((g) => (
                   <div key={g.programaId}>
-                    <p className="sticky top-0 z-[1] border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                    <p className="sticky top-0 z-[1] border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
                       {g.nombre} · {g.items.length}
                     </p>
                     <ul>
@@ -236,7 +236,7 @@ export default function DecanoDashboard() {
                   <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
                     Asignatura: {seleccionada.nombre}
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {seleccionada.nombrePrograma}
                     {seleccionada.nombreDepartamento && ` · ${seleccionada.nombreDepartamento}`}
                   </p>
