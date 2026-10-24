@@ -4,6 +4,7 @@ import ContenidoAsignatura from "../components/ContenidoAsignatura.jsx";
 import {
   suscribirProgramas,
   suscribirTodasLasAsignaturas,
+  suscribirUsuarios,
 } from "../services/asignaturas.js";
 import {
   ESTADO_ADMIN,
@@ -13,8 +14,9 @@ import {
   listarComponentes,
   revisoresDeAsignatura,
 } from "../utils/constantes.js";
-import { exportarPdfAdmin } from "../utils/exportPdf.js";
-import { exportarExcelAdmin } from "../utils/exportExcel.js";
+import { exportarPdfPerfilPrograma } from "../utils/exportPdf.js";
+import { exportarExcelPerfilPrograma } from "../utils/exportExcel.js";
+import { formatearUltimaConexion } from "../utils/tiempo.js";
 
 const CAMPO =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-institucional-navy focus:ring-2 focus:ring-institucional-navy/30 dark:border-slate-600 dark:bg-slate-800 dark:focus:border-institucional-gold dark:focus:ring-institucional-gold/30";
@@ -40,6 +42,7 @@ function resumenSolicitudes(asignatura) {
 export default function AdminDashboard() {
   const [programas, setProgramas] = useState([]);
   const [asignaturas, setAsignaturas] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [programaFiltro, setProgramaFiltro] = useState("");
   const [busqueda, setBusqueda] = useState("");
@@ -52,11 +55,27 @@ export default function AdminDashboard() {
       setAsignaturas(lista);
       setCargando(false);
     });
+    const d3 = suscribirUsuarios(setUsuarios);
     return () => {
       d1();
       d2();
+      d3();
     };
   }, []);
+
+  // Última sesión de cada director/departamento, y del decano — solo la ve
+  // el Director de Departamento (este panel), en ningún otro.
+  const directorPorPrograma = useMemo(() => {
+    const mapa = new Map();
+    for (const u of usuarios) if (u.rol === "director" && u.programaId) mapa.set(u.programaId, u);
+    return mapa;
+  }, [usuarios]);
+  const departamentoPorId = useMemo(() => {
+    const mapa = new Map();
+    for (const u of usuarios) if (u.rol === "departamento" && u.departamentoId) mapa.set(u.departamentoId, u);
+    return mapa;
+  }, [usuarios]);
+  const decanoUsuario = useMemo(() => usuarios.find((u) => u.rol === "decano") || null, [usuarios]);
 
   const ordenadas = useMemo(
     () =>
@@ -87,7 +106,9 @@ export default function AdminDashboard() {
     const mapa = new Map();
     for (const x of visibles) {
       const clave = x.asignatura.programaId;
-      if (!mapa.has(clave)) mapa.set(clave, { nombre: x.asignatura.nombrePrograma || clave, items: [] });
+      if (!mapa.has(clave)) {
+        mapa.set(clave, { programaId: clave, nombre: x.asignatura.nombrePrograma || clave, items: [] });
+      }
       mapa.get(clave).items.push(x);
     }
     return [...mapa.values()];
@@ -142,10 +163,31 @@ export default function AdminDashboard() {
     (s) => s.estadoAdmin === ESTADO_ADMIN.PENDIENTE
   ).length;
 
+  // El consolidado se descarga por programa (sería un documento enorme si
+  // fuera de todos a la vez): requiere que el filtro de programa tenga uno
+  // elegido. Incluye TODAS las asignaturas de ese programa, ordenadas de
+  // forma descendente, con el contenido completo de cada componente
+  // (incluida la idoneidad), sin importar si tuvieron o no revisión.
+  const nombreProgramaSeleccionado = programas.find((p) => p.id === programaFiltro)?.nombre || "";
+  const asignaturasDelProgramaSeleccionado = useMemo(() => {
+    if (!programaFiltro) return [];
+    return ordenadas
+      .filter((a) => a.programaId === programaFiltro)
+      .sort((a, b) => (b.orden ?? 0) - (a.orden ?? 0));
+  }, [ordenadas, programaFiltro]);
+
   const descargarPdf = () =>
-    exportarPdfAdmin(todasLasSolicitudes, "consolidado-perfiles-docentes.pdf");
+    exportarPdfPerfilPrograma(
+      nombreProgramaSeleccionado,
+      asignaturasDelProgramaSeleccionado,
+      `perfil-completo-${programaFiltro}.pdf`
+    );
   const descargarExcel = () =>
-    exportarExcelAdmin(todasLasSolicitudes, "consolidado-perfiles-docentes.xlsx");
+    exportarExcelPerfilPrograma(
+      nombreProgramaSeleccionado,
+      asignaturasDelProgramaSeleccionado,
+      `perfil-completo-${programaFiltro}.xlsx`
+    );
 
   const resumenSeleccionada = seleccionada ? resumenSolicitudes(seleccionada) : null;
 
@@ -159,18 +201,20 @@ export default function AdminDashboard() {
       <main className="mx-auto w-full max-w-[2400px] space-y-4 px-4 py-6 sm:px-6 lg:px-8">
         <div className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Consolidado general</h2>
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Consolidado por programa</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {todasLasSolicitudes.length} solicitudes de modificación en los {programas.length} programas
+              {programaFiltro
+                ? `${nombreProgramaSeleccionado} · ${asignaturasDelProgramaSeleccionado.length} asignaturas listas para descargar.`
+                : "Elige un programa en el filtro de la izquierda para descargar su consolidado completo."}
               {" · "}
-              {pendientesTotal} pendientes de resolver.
+              {pendientesTotal} solicitudes pendientes de resolver en total.
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
             <button
               type="button"
               className="btn-secondary"
-              disabled={todasLasSolicitudes.length === 0}
+              disabled={!programaFiltro}
               onClick={descargarExcel}
             >
               ⬇ Excel
@@ -178,7 +222,7 @@ export default function AdminDashboard() {
             <button
               type="button"
               className="btn-primary"
-              disabled={todasLasSolicitudes.length === 0}
+              disabled={!programaFiltro}
               onClick={descargarPdf}
             >
               ⬇ PDF
@@ -232,9 +276,15 @@ export default function AdminDashboard() {
               ) : (
                 grupos.map((g) => (
                   <div key={g.nombre}>
-                    <p className="sticky top-0 z-[1] border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-                      {g.nombre} · {g.items.length}
-                    </p>
+                    <div className="sticky top-0 z-[1] border-b border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        {g.nombre} · {g.items.length}
+                      </p>
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                        Última sesión del director:{" "}
+                        {formatearUltimaConexion(directorPorPrograma.get(g.programaId)?.ultimaConexion)}
+                      </p>
+                    </div>
                     <ul>
                       {g.items.map(({ asignatura, total, pendientes }) => {
                         const activa = asignatura.id === seleccionadaId;
@@ -286,6 +336,19 @@ export default function AdminDashboard() {
                     {resumenSeleccionada.total === 0
                       ? "Sin modificaciones solicitadas"
                       : `${resumenSeleccionada.pendientes} de ${resumenSeleccionada.total} modificaciones por resolver`}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                    Última sesión — Director:{" "}
+                    {formatearUltimaConexion(directorPorPrograma.get(seleccionada.programaId)?.ultimaConexion)}
+                    {seleccionada.departamentoId && (
+                      <>
+                        {" · "}
+                        {seleccionada.nombreDepartamento || "Departamento"}:{" "}
+                        {formatearUltimaConexion(departamentoPorId.get(seleccionada.departamentoId)?.ultimaConexion)}
+                      </>
+                    )}
+                    {" · "}
+                    Decano: {formatearUltimaConexion(decanoUsuario?.ultimaConexion)}
                   </p>
                 </div>
                 <ContenidoAsignatura key={seleccionada.id} asignatura={seleccionada} rol="admin" />

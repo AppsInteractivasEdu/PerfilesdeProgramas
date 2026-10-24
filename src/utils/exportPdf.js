@@ -1,5 +1,6 @@
 ﻿import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { listarComponentes, partirCompetencia } from "./constantes.js";
 
 function encabezado(documento, titulo, subtitulo) {
   documento.setFontSize(14);
@@ -36,49 +37,53 @@ export function exportarPdfDirector(nombrePrograma, filas, nombreArchivo) {
   documento.save(nombreArchivo);
 }
 
-/** Consolidado del administrador: todas las solicitudes revisadas, con su resolución. */
-export function exportarPdfAdmin(filas, nombreArchivo) {
-  const documento = new jsPDF({ unit: "pt", orientation: "landscape" });
-  encabezado(
-    documento,
-    "Consolidado de modificaciones a perfiles docentes",
-    "Todos los programas"
-  );
+/**
+ * Consolidado completo de UN programa, para el Director de Departamento:
+ * cada asignatura con el texto actual (ya editado si aplica) de todos sus
+ * componentes, incluido el criterio integral de idoneidad. No depende de si
+ * hubo o no solicitudes de modificación — un componente sin ninguna
+ * revisión se muestra tal cual está.
+ */
+export function exportarPdfPerfilPrograma(nombrePrograma, asignaturas, nombreArchivo) {
+  const documento = new jsPDF({ unit: "pt" });
+  const margenX = 40;
+  const anchoUtil = documento.internal.pageSize.getWidth() - margenX * 2;
+  const altoPagina = documento.internal.pageSize.getHeight();
+  let y = 0;
 
-  autoTable(documento, {
-    startY: 95,
-    head: [
-      [
-        "Programa",
-        "Asignatura",
-        "Componente",
-        "Origen",
-        "Comentario",
-        "Estado",
-        "Comentario del Director de Departamento",
-      ],
-    ],
-    body: filas.map((f) => [
-      f.programa,
-      f.asignatura,
-      f.componente,
-      f.origen || "Director de programa",
-      f.comentarioDirector,
-      f.estadoAdmin,
-      f.comentarioAdmin || "—",
-    ]),
-    styles: { fontSize: 8, cellPadding: 5, valign: "top" },
-    headStyles: { fillColor: [15, 27, 76], textColor: 255 },
-    columnStyles: {
-      0: { cellWidth: 85 },
-      1: { cellWidth: 115 },
-      2: { cellWidth: 80 },
-      3: { cellWidth: 65 },
-      4: { cellWidth: "auto" },
-      5: { cellWidth: 50 },
-      6: { cellWidth: "auto" },
-    },
-  });
+  function asegurarEspacio(alto) {
+    if (y + alto > altoPagina - 40) {
+      documento.addPage();
+      y = 50;
+    }
+  }
+
+  function escribir(texto, { fontSize = 9, bold = false, color = [51, 65, 85], espacioDespues = 10 } = {}) {
+    documento.setFont(undefined, bold ? "bold" : "normal");
+    documento.setFontSize(fontSize);
+    documento.setTextColor(...color);
+    const lineas = documento.splitTextToSize(texto || "—", anchoUtil);
+    const alto = lineas.length * (fontSize + 3);
+    asegurarEspacio(alto);
+    documento.text(lineas, margenX, y);
+    y += alto + espacioDespues;
+  }
+
+  encabezado(documento, "Consolidado completo de perfiles docentes", `Programa: ${nombrePrograma}`);
+  y = 100;
+
+  for (const a of asignaturas) {
+    asegurarEspacio(26);
+    escribir(`Asignatura: ${a.nombre}`, { fontSize: 13, bold: true, color: [15, 27, 76], espacioDespues: 6 });
+
+    for (const { clave, etiqueta, tipo } of listarComponentes(a.componentes)) {
+      const valor = a.componentes?.[clave]?.valor || "";
+      const [nombreComp, descripcion] = tipo === "competencia" ? partirCompetencia(valor) : [etiqueta, valor];
+      escribir(tipo === "competencia" ? nombreComp : etiqueta, { fontSize: 10, bold: true, color: [30, 41, 59], espacioDespues: 2 });
+      escribir(tipo === "competencia" ? descripcion : valor, { fontSize: 9, espacioDespues: 10 });
+    }
+    y += 10;
+  }
 
   documento.save(nombreArchivo);
 }

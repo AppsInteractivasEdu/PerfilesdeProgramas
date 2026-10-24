@@ -52,12 +52,17 @@ service cloud.firestore {
     }
 
     // usuarios: cada quien lee solo su propio perfil; el admin y el decano pueden leer todos
-    // (el decano necesita saber quién es director de cada programa para los filtros).
-    // No hay escritura desde el cliente: los usuarios se crean con el script
-    // de carga (scripts/seed.cjs) usando el SDK de administrador.
+    // (el decano necesita saber quién es director de cada programa para los filtros;
+    // el admin, además, para mostrar la última sesión de cada uno).
+    // Los usuarios se crean con el script de carga (scripts/seed.cjs) usando
+    // el SDK de administrador. La única escritura permitida desde el cliente
+    // es que cada quien marque su propia "ultimaConexion" al entrar —
+    // ningún otro campo (rol, programa, departamento) se puede tocar así.
     match /usuarios/{uid} {
       allow read: if autenticado() && (request.auth.uid == uid || esAdmin() || esDecano());
-      allow write: if false;
+      allow update: if autenticado() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ultimaConexion']);
+      allow create, delete: if false;
     }
 
     // programas y departamentos: catálogos de solo lectura para cualquier usuario autenticado.

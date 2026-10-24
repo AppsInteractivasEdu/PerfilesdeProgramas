@@ -36,7 +36,7 @@ export default function AsignaturaCard({ asignatura, revisor = "director" }) {
       </button>
 
       {abierta && (
-        <div className="border-t border-slate-200 p-5 dark:border-slate-700">
+        <div className="border-t border-slate-200 bg-slate-100 p-5 dark:border-slate-700 dark:bg-slate-900">
           <ContenidoAsignatura asignatura={asignatura} rol={revisor} />
           <div className="mt-6 flex justify-center border-t border-slate-200 pt-4 dark:border-slate-700">
             <button type="button" className="btn-secondary" onClick={() => setAbierta(false)}>

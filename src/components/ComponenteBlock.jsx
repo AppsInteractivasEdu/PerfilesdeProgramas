@@ -102,9 +102,11 @@ function PanelRevisor({ revisor, rev, onAprobarModificacion, onRechazar }) {
 /**
  * rol="director" | "departamento" | "decano": vista de revisor único, con
  * botones Aprobar / Modificar sobre su propia revisión (prop revisorActivo).
- * rol="admin": muestra la revisión de cada revisor aplicable a la asignatura
- * (prop revisoresAplicables), permite aprobar/rechazar cada una y editar el
- * texto del componente.
+ * rol="admin": de SOLO LECTURA — muestra el texto original y la revisión de
+ * cada revisor aplicable (prop revisoresAplicables), con Aprobar/Rechazar
+ * para cada una. La edición del texto se hace aparte, en el recuadro
+ * duplicado (ComponenteEditorAdmin) que solo aparece cuando el filtro "Ver
+ * componente" está puesto en un componente concreto.
  */
 export default function ComponenteBlock({
   etiqueta,
@@ -118,12 +120,9 @@ export default function ComponenteBlock({
   onEnviarSugerencia,
   onAprobarModificacion,
   onRechazar,
-  onEditarTexto,
 }) {
   const [editandoSugerencia, setEditandoSugerencia] = useState(false);
   const [textoSugerencia, setTextoSugerencia] = useState("");
-  const [editandoValor, setEditandoValor] = useState(false);
-  const [textoValor, setTextoValor] = useState("");
   const [guardando, setGuardando] = useState(false);
 
   const esAdmin = rol === "admin";
@@ -153,18 +152,6 @@ export default function ComponenteBlock({
     setEditandoSugerencia(false);
   };
 
-  const guardarValor = async () => {
-    setGuardando(true);
-    await onEditarTexto(textoValor.trim());
-    setGuardando(false);
-    setEditandoValor(false);
-  };
-
-  const abrirEdicionValor = () => {
-    setTextoValor(componente?.valor || "");
-    setEditandoValor(true);
-  };
-
   const idCampo = `${tituloContexto}-${titulo}`.replace(/\s+/g, "-");
 
   return (
@@ -176,32 +163,9 @@ export default function ComponenteBlock({
         )}
       </div>
 
-      {editandoValor ? (
-        <div className="mt-3 space-y-2">
-          <label className="field-label" htmlFor={`valor-${idCampo}`}>
-            Texto del componente
-          </label>
-          <textarea
-            id={`valor-${idCampo}`}
-            value={textoValor}
-            onChange={(e) => setTextoValor(e.target.value)}
-            rows={Math.min(24, Math.max(6, Math.ceil(textoValor.length / 45) + textoValor.split("\n").length))}
-            className={CAMPO}
-          />
-          <div className="flex gap-2">
-            <button type="button" className="btn-primary" disabled={guardando} onClick={guardarValor}>
-              {guardando ? "Guardando…" : "Guardar texto"}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => setEditandoValor(false)}>
-              Cancelar
-            </button>
-          </div>
-        </div>
-      ) : (
-        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-          {cuerpo || "—"}
-        </p>
-      )}
+      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+        {cuerpo || "—"}
+      </p>
 
       {esAdmin && tipo !== "idoneidad" && (
         <div className="mt-3 space-y-2">
@@ -224,13 +188,7 @@ export default function ComponenteBlock({
       )}
 
       <div className="mt-auto pt-3">
-        {esAdmin ? (
-          !editandoValor && (
-            <button type="button" className="btn-secondary" onClick={abrirEdicionValor}>
-              ✎ Editar texto
-            </button>
-          )
-        ) : tipo === "idoneidad" ? null : !editandoSugerencia ? (
+        {esAdmin ? null : tipo === "idoneidad" ? null : !editandoSugerencia ? (
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-approve" onClick={() => onAprobar(revisorActivo)}>
               ✓ Aprobar

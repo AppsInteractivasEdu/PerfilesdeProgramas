@@ -33,6 +33,17 @@ export function suscribirDepartamentos(cb) {
   });
 }
 
+/**
+ * Suscribe en tiempo real a todos los usuarios (solo lo pueden leer el admin
+ * y el decano, según firestore.rules). El admin lo usa para mostrar la
+ * última sesión de cada director/departamento/decano.
+ */
+export function suscribirUsuarios(cb) {
+  return onSnapshot(collection(db, "usuarios"), (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+}
+
 /** Suscribe en tiempo real a las asignaturas de un programa. cb recibe la lista. */
 export function suscribirAsignaturasPorPrograma(programaId, cb) {
   // Sin orderBy en la consulta a propósito: combinarlo con el "where" exige

@@ -4,7 +4,7 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { auth, db } from "../firebase.js";
 
 const AuthContext = createContext(null);
@@ -24,6 +24,11 @@ export function AuthProvider({ children }) {
           const snap = await getDoc(ref);
           if (snap.exists()) {
             setPerfil(snap.data());
+            // Deja registrada la hora de esta sesión para que el Director de
+            // Departamento pueda ver cuándo fue la última vez que entró cada
+            // quien. Si las reglas de Firestore todavía no lo permiten, se
+            // ignora en silencio (no debe bloquear el inicio de sesión).
+            updateDoc(ref, { ultimaConexion: serverTimestamp() }).catch(() => {});
           } else {
             setPerfil(null);
             setError(

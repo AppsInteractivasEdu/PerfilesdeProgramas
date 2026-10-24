@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import ComponenteBlock from "./ComponenteBlock.jsx";
+import ComponenteEditorAdmin from "./ComponenteEditorAdmin.jsx";
 import { listarComponentes, revisoresDeAsignatura } from "../utils/constantes.js";
 import {
   aprobarComponente,
@@ -43,17 +44,24 @@ export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
   const revisoresAplicables = useMemo(() => revisoresDeAsignatura(asignatura), [asignatura]);
 
   const [filtroClave, setFiltroClave] = useState("todos");
-  const lista = esAdmin && filtroClave !== "todos" ? listaCompleta.filter((c) => c.clave === filtroClave) : listaCompleta;
+  const filtrandoUnComponente = esAdmin && filtroClave !== "todos";
+  const lista = filtrandoUnComponente ? listaCompleta.filter((c) => c.clave === filtroClave) : listaCompleta;
 
   const fijos = lista.filter((c) => c.tipo === "fijo");
   const competencias = lista.filter((c) => c.tipo === "competencia");
   const idoneidad = lista.filter((c) => c.tipo === "idoneidad");
 
   const enDirector = !esAdmin;
-  const clasesFijos = enDirector ? "lg:grid-cols-3" : "xl:grid-cols-3";
-  const clasesCompetencias = enDirector
-    ? "md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-    : "md:grid-cols-2 2xl:grid-cols-3";
+  const clasesFijos = filtrandoUnComponente
+    ? "sm:grid-cols-2"
+    : enDirector
+      ? "lg:grid-cols-3"
+      : "xl:grid-cols-3";
+  const clasesCompetencias = filtrandoUnComponente
+    ? "sm:grid-cols-2"
+    : enDirector
+      ? "md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+      : "md:grid-cols-2 2xl:grid-cols-3";
 
   const bloque = ({ clave, etiqueta, tipo }) => (
     <ComponenteBlock
@@ -69,9 +77,27 @@ export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
       onEnviarSugerencia={(revisor, texto) => enviarSugerencia(asignatura.id, clave, revisor, texto)}
       onAprobarModificacion={(revisor) => aprobarSolicitudAdmin(asignatura.id, clave, revisor)}
       onRechazar={(revisor, comentario) => rechazarSolicitudAdmin(asignatura.id, clave, revisor, comentario)}
-      onEditarTexto={(texto) => editarTextoComponente(asignatura.id, clave, texto)}
     />
   );
+
+  // Solo cuando el filtro está puesto en UN componente concreto se agrega,
+  // al lado, el recuadro duplicado editable (único lugar donde se edita el
+  // texto, según lo pedido: no se edita directamente sobre el recuadro que
+  // muestra las revisiones de los demás).
+  const bloqueConEditor = ({ clave, etiqueta, tipo }) => (
+    <Fragment key={clave}>
+      {bloque({ clave, etiqueta, tipo })}
+      <ComponenteEditorAdmin
+        tipo={tipo}
+        etiqueta={etiqueta}
+        tituloContexto={asignatura.id}
+        componente={componentes[clave]}
+        onEditarTexto={(texto) => editarTextoComponente(asignatura.id, clave, texto)}
+      />
+    </Fragment>
+  );
+
+  const renderBloque = filtrandoUnComponente ? bloqueConEditor : bloque;
 
   return (
     <div className="space-y-6">
@@ -98,17 +124,17 @@ export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
 
       {fijos.length > 0 && (
         <Seccion titulo="Formación y experiencia" clases={clasesFijos}>
-          {fijos.map(bloque)}
+          {fijos.map(renderBloque)}
         </Seccion>
       )}
       {competencias.length > 0 && (
         <Seccion titulo="Competencias" cantidad={competencias.length} clases={clasesCompetencias}>
-          {competencias.map(bloque)}
+          {competencias.map(renderBloque)}
         </Seccion>
       )}
       {idoneidad.length > 0 && (
-        <Seccion titulo="Criterio de idoneidad" clases="">
-          {idoneidad.map(bloque)}
+        <Seccion titulo="Criterio de idoneidad" clases={filtrandoUnComponente ? "sm:grid-cols-2" : ""}>
+          {idoneidad.map(renderBloque)}
         </Seccion>
       )}
     </div>
