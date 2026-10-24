@@ -1,10 +1,11 @@
+import { useMemo, useState } from "react";
 import ComponenteBlock from "./ComponenteBlock.jsx";
-import { listarComponentes } from "../utils/constantes.js";
+import { listarComponentes, revisoresDeAsignatura } from "../utils/constantes.js";
 import {
-  aprobarComponenteDirector,
+  aprobarComponente,
   aprobarSolicitudAdmin,
   editarTextoComponente,
-  enviarSugerenciaDirector,
+  enviarSugerencia,
   rechazarSolicitudAdmin,
 } from "../services/asignaturas.js";
 
@@ -22,15 +23,33 @@ function Seccion({ titulo, cantidad, clases, children }) {
   );
 }
 
-/** Todos los componentes de una asignatura, acomodados en horizontal según el ancho disponible. */
+const CAMPO_FILTRO =
+  "w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-institucional-navy focus:ring-2 focus:ring-institucional-navy/30 dark:border-slate-600 dark:bg-slate-800 dark:focus:border-institucional-gold dark:focus:ring-institucional-gold/30";
+
+/**
+ * Todos los componentes de una asignatura, acomodados en horizontal según el ancho disponible.
+ *
+ * rol="director" | "departamento" | "decano": cada uno revisa su propia
+ * columna de aprobaciones/sugerencias (prop "rol" hace también de revisor).
+ * rol="admin": el Director de Departamento ve, por componente, la revisión
+ * de cada revisor aplicable (director de programa, departamento si existe, y
+ * decano), con un filtro para ubicarse rápido en un componente concreto.
+ */
 export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
   const componentes = asignatura.componentes || {};
-  const lista = listarComponentes(componentes);
+  const listaCompleta = listarComponentes(componentes);
+  const esAdmin = rol === "admin";
+  const revisorActivo = esAdmin ? null : rol;
+  const revisoresAplicables = useMemo(() => revisoresDeAsignatura(asignatura), [asignatura]);
+
+  const [filtroClave, setFiltroClave] = useState("todos");
+  const lista = esAdmin && filtroClave !== "todos" ? listaCompleta.filter((c) => c.clave === filtroClave) : listaCompleta;
+
   const fijos = lista.filter((c) => c.tipo === "fijo");
   const competencias = lista.filter((c) => c.tipo === "competencia");
   const idoneidad = lista.filter((c) => c.tipo === "idoneidad");
 
-  const enDirector = rol === "director";
+  const enDirector = !esAdmin;
   const clasesFijos = enDirector ? "lg:grid-cols-3" : "xl:grid-cols-3";
   const clasesCompetencias = enDirector
     ? "md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
@@ -44,19 +63,44 @@ export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
       etiqueta={etiqueta}
       tituloContexto={asignatura.id}
       componente={componentes[clave]}
-      onAprobar={() => aprobarComponenteDirector(asignatura.id, clave)}
-      onEnviarSugerencia={(texto) => enviarSugerenciaDirector(asignatura.id, clave, texto)}
-      onAprobarModificacion={() => aprobarSolicitudAdmin(asignatura.id, clave)}
-      onRechazar={(comentario) => rechazarSolicitudAdmin(asignatura.id, clave, comentario)}
+      revisorActivo={revisorActivo}
+      revisoresAplicables={revisoresAplicables}
+      onAprobar={(revisor) => aprobarComponente(asignatura.id, clave, revisor)}
+      onEnviarSugerencia={(revisor, texto) => enviarSugerencia(asignatura.id, clave, revisor, texto)}
+      onAprobarModificacion={(revisor) => aprobarSolicitudAdmin(asignatura.id, clave, revisor)}
+      onRechazar={(revisor, comentario) => rechazarSolicitudAdmin(asignatura.id, clave, revisor, comentario)}
       onEditarTexto={(texto) => editarTextoComponente(asignatura.id, clave, texto)}
     />
   );
 
   return (
     <div className="space-y-6">
-      <Seccion titulo="Formación y experiencia" clases={clasesFijos}>
-        {fijos.map(bloque)}
-      </Seccion>
+      {esAdmin && (
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="field-label shrink-0" htmlFor={`filtro-componente-${asignatura.id}`}>
+            Ver componente
+          </label>
+          <select
+            id={`filtro-componente-${asignatura.id}`}
+            value={filtroClave}
+            onChange={(e) => setFiltroClave(e.target.value)}
+            className={CAMPO_FILTRO}
+          >
+            <option value="todos">Todos los componentes</option>
+            {listaCompleta.map((c) => (
+              <option key={c.clave} value={c.clave}>
+                {c.etiqueta}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {fijos.length > 0 && (
+        <Seccion titulo="Formación y experiencia" clases={clasesFijos}>
+          {fijos.map(bloque)}
+        </Seccion>
+      )}
       {competencias.length > 0 && (
         <Seccion titulo="Competencias" cantidad={competencias.length} clases={clasesCompetencias}>
           {competencias.map(bloque)}

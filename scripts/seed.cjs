@@ -1,8 +1,11 @@
 /**
- * Carga inicial de datos en Firebase: crea los usuarios (directores + admin)
- * en Authentication, el catálogo de programas y las asignaturas con todos sus
- * componentes (pregrado, posgradual, experiencia, competencias 1..N e
- * idoneidad), leyendo data/tabla_resultado.xlsx.
+ * Carga inicial de datos en Firebase: crea los usuarios (directores de
+ * programa, departamentos, decano y admin) en Authentication, los catálogos
+ * de programas y departamentos, y las asignaturas con todos sus componentes
+ * (pregrado, posgradual, experiencia, competencias 1..N e idoneidad),
+ * leyendo data/tabla_resultado.xlsx. Cada componente lleva una revisión en
+ * blanco por cada revisor aplicable (director de programa, departamento si
+ * la asignatura tiene uno asignado, y decano).
  *
  * Requiere, en la raíz del proyecto:
  *   - serviceAccountKey.json  (Firebase Console > Configuración del proyecto
@@ -14,7 +17,8 @@ const fs = require("fs");
 const path = require("path");
 const admin = require("firebase-admin");
 const XLSX = require("xlsx");
-const { leerAsignaturas, componenteNuevo, normalizarTexto } = require("./lib_excel.cjs");
+const { leerAsignaturas, componenteNuevo, migrarComponenteAntiguo, normalizarTexto } = require("./lib_excel.cjs");
+const { DEPARTAMENTOS, construirMapaAsignacion } = require("./datos_departamentos.cjs");
 
 const RAIZ = path.resolve(__dirname, "..");
 const RUTA_SERVICE_ACCOUNT = path.join(RAIZ, "serviceAccountKey.json");
@@ -34,7 +38,7 @@ if (!fs.existsSync(RUTA_SERVICE_ACCOUNT)) {
   );
 }
 if (!fs.existsSync(RUTA_CREDENCIALES)) {
-  salirConError("Falta scripts/credenciales.json (debería existir; no lo borres).");
+  salirConError("Falta scripts/credenciales.json (debería existir; no lo borres). Genéralo con: node scripts/generar_credenciales.cjs");
 }
 if (!fs.existsSync(RUTA_EXCEL)) {
   salirConError(`Falta ${RUTA_EXCEL}`);
@@ -50,8 +54,10 @@ const credenciales = JSON.parse(fs.readFileSync(RUTA_CREDENCIALES, "utf-8"));
 const porNombrePrograma = new Map(
   credenciales.filter((c) => c.rol === "director").map((c) => [c.nombrePrograma, c])
 );
+const mapaAsignacionDepartamento = construirMapaAsignacion();
 
-async function crearOActualizarUsuario({ email, password, rol, programaId, nombrePrograma }) {
+async function crearOActualizarUsuario(c) {
+  const { email, password, rol } = c;
   let uid;
   try {
     const existente = await auth.getUserByEmail(email);
@@ -64,12 +70,47 @@ async function crearOActualizarUsuario({ email, password, rol, programaId, nombr
     uid = nuevo.uid;
     console.log(`  usuario creado: ${email}`);
   }
-  await db.collection("usuarios").doc(uid).set({
-    rol,
-    programaId: programaId || null,
-    nombrePrograma: nombrePrograma || null,
-    nombre: rol === "admin" ? "Director de Departamento" : `Dirección de ${nombrePrograma}`,
-  });
+
+  let datos;
+  if (rol === "director") {
+    datos = {
+      rol,
+      programaId: c.programaId,
+      nombrePrograma: c.nombrePrograma,
+      departamentoId: null,
+      nombreDepartamento: null,
+      nombre: `Dirección de ${c.nombrePrograma}`,
+    };
+  } else if (rol === "departamento") {
+    datos = {
+      rol,
+      programaId: null,
+      nombrePrograma: null,
+      departamentoId: c.departamentoId,
+      nombreDepartamento: c.nombreDepartamento,
+      nombre: c.nombreDepartamento,
+    };
+  } else if (rol === "decano") {
+    datos = {
+      rol,
+      programaId: null,
+      nombrePrograma: null,
+      departamentoId: null,
+      nombreDepartamento: null,
+      nombre: "Decano de la Facultad de Educación",
+    };
+  } else {
+    // admin
+    datos = {
+      rol,
+      programaId: null,
+      nombrePrograma: null,
+      departamentoId: null,
+      nombreDepartamento: null,
+      nombre: "Director de Departamento",
+    };
+  }
+  await db.collection("usuarios").doc(uid).set(datos);
 }
 
 async function crearUsuarios() {
@@ -90,14 +131,28 @@ async function crearProgramas() {
   console.log(`  ${porNombrePrograma.size} programas.`);
 }
 
+async function crearDepartamentos() {
+  console.log("\n3) Creando catálogo de departamentos…");
+  const lote = db.batch();
+  for (const d of DEPARTAMENTOS) {
+    const ref = db.collection("departamentos").doc(d.departamentoId);
+    lote.set(ref, { nombre: d.nombre });
+  }
+  await lote.commit();
+  console.log(`  ${DEPARTAMENTOS.length} departamentos.`);
+}
+
 async function cargarAsignaturas() {
-  console.log("\n3) Cargando asignaturas desde tabla_resultado.xlsx…");
+  console.log("\n4) Cargando asignaturas desde tabla_resultado.xlsx…");
   console.log(
     "   (seguro de re-ejecutar: una asignatura que ya existe solo actualiza " +
-      "nombre/orden; para actualizar textos usa scripts/sincronizar_textos.cjs)"
+      "nombre/orden/departamento; para actualizar textos usa scripts/sincronizar_textos.cjs)"
   );
   let nuevas = 0;
   let existentes = 0;
+  let componentesMigrados = 0;
+  let componentesCreados = 0;
+  let departamentosAsignados = 0;
 
   for (const f of leerAsignaturas(XLSX.readFile(RUTA_EXCEL))) {
     const credencial = porNombrePrograma.get(f.nombrePrograma);
@@ -106,31 +161,72 @@ async function cargarAsignaturas() {
       continue;
     }
     const docId = `${credencial.programaId}__${normalizarTexto(f.nombreAsignatura)}`;
+    const asignacion = mapaAsignacionDepartamento.get(docId) || null;
+    const conDepartamento = Boolean(asignacion);
+
     const ref = db.collection("asignaturas").doc(docId);
     const datosBase = {
       programaId: credencial.programaId,
       nombrePrograma: f.nombrePrograma,
       nombre: f.nombreAsignatura,
       orden: f.fila,
+      departamentoId: asignacion ? asignacion.departamentoId : null,
+      nombreDepartamento: asignacion ? asignacion.nombreDepartamento : null,
     };
-    if ((await ref.get()).exists) {
-      await ref.update(datosBase);
-      existentes++;
-    } else {
+
+    const snap = await ref.get();
+    if (!snap.exists) {
       const componentes = {};
       for (const [clave, valor] of Object.entries(f.componentes)) {
-        componentes[clave] = componenteNuevo(valor);
+        componentes[clave] = componenteNuevo(valor, { conDepartamento });
       }
       await ref.set({ ...datosBase, componentes });
       nuevas++;
+      if (conDepartamento) departamentosAsignados++;
+      continue;
     }
+
+    existentes++;
+    const actual = snap.data();
+    const cambios = { ...datosBase };
+    const actualesComponentes = actual.componentes || {};
+    if (conDepartamento && actual.departamentoId !== asignacion.departamentoId) departamentosAsignados++;
+
+    for (const [clave, valor] of Object.entries(f.componentes)) {
+      const existente = actualesComponentes[clave];
+      if (!existente) {
+        cambios[`componentes.${clave}`] = componenteNuevo(valor, { conDepartamento });
+        componentesCreados++;
+      } else if (!existente.revisiones) {
+        // esquema antiguo (previo a directores+departamento+decano): migrar conservando el estado.
+        cambios[`componentes.${clave}`] = migrarComponenteAntiguo(existente, { conDepartamento });
+        componentesMigrados++;
+      } else if (conDepartamento && !existente.revisiones.departamento) {
+        // la asignatura pasó a tener departamento asignado: se añade su revisión en blanco.
+        cambios[`componentes.${clave}.revisiones.departamento`] = {
+          estado: "pendiente",
+          comentario: "",
+          fecha: null,
+          estadoAdmin: "pendiente",
+          comentarioAdmin: "",
+          fechaAdmin: null,
+          historial: [],
+        };
+      }
+    }
+    await ref.update(cambios);
   }
-  console.log(`  Total: ${nuevas} asignaturas nuevas, ${existentes} ya existían.`);
+  console.log(
+    `  Total: ${nuevas} asignaturas nuevas, ${existentes} ya existían, ` +
+      `${componentesCreados} componentes creados, ${componentesMigrados} componentes migrados al esquema nuevo, ` +
+      `${departamentosAsignados} asignaturas con departamento asignado.`
+  );
 }
 
 async function main() {
   await crearUsuarios();
   await crearProgramas();
+  await crearDepartamentos();
   await cargarAsignaturas();
   console.log("\n✔ Carga completa.\n");
   process.exit(0);

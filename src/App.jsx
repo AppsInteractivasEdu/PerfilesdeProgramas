@@ -1,6 +1,8 @@
 import { useAuth } from "./context/AuthContext.jsx";
 import Login from "./pages/Login.jsx";
 import DirectorDashboard from "./pages/DirectorDashboard.jsx";
+import DepartamentoDashboard from "./pages/DepartamentoDashboard.jsx";
+import DecanoDashboard from "./pages/DecanoDashboard.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 
 export default function App() {
@@ -19,6 +21,8 @@ export default function App() {
   }
 
   if (perfil.rol === "admin") return <AdminDashboard />;
+  if (perfil.rol === "decano") return <DecanoDashboard />;
+  if (perfil.rol === "departamento") return <DepartamentoDashboard />;
   if (perfil.rol === "director") return <DirectorDashboard />;
 
   return (

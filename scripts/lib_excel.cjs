@@ -58,16 +58,59 @@ function leerAsignaturas(libro) {
   return filas;
 }
 
-function componenteNuevo(valor) {
+/** Una revisión nueva, en blanco, para un revisor (director de programa, departamento o decano). */
+function revisionNueva() {
   return {
-    valor: valor || "",
-    estadoDirector: "pendiente",
-    comentarioDirector: "",
-    fechaDirector: null,
+    estado: "pendiente",
+    comentario: "",
+    fecha: null,
     estadoAdmin: "pendiente",
     comentarioAdmin: "",
     fechaAdmin: null,
+    historial: [],
   };
 }
 
-module.exports = { leerAsignaturas, componenteNuevo, normalizarTexto };
+/**
+ * Un componente nuevo, con su texto y una revisión en blanco por cada
+ * revisor aplicable: siempre director y decano; departamento solo si
+ * conDepartamento es true.
+ */
+function componenteNuevo(valor, { conDepartamento = false } = {}) {
+  const revisiones = { director: revisionNueva(), decano: revisionNueva() };
+  if (conDepartamento) revisiones.departamento = revisionNueva();
+  return { valor: valor || "", fechaEdicion: null, textoActualizado: false, revisiones };
+}
+
+/**
+ * Migra un componente con el esquema antiguo (campos planos estadoDirector/
+ * comentarioDirector/...) al esquema nuevo (revisiones.director/...),
+ * conservando su estado. Útil para datos cargados antes de este cambio.
+ */
+function migrarComponenteAntiguo(viejo, { conDepartamento = false } = {}) {
+  const director = {
+    estado: viejo.estadoDirector || "pendiente",
+    comentario: viejo.comentarioDirector || "",
+    fecha: viejo.fechaDirector ?? null,
+    estadoAdmin: viejo.estadoAdmin || "pendiente",
+    comentarioAdmin: viejo.comentarioAdmin || "",
+    fechaAdmin: viejo.fechaAdmin ?? null,
+    historial: viejo.historial || [],
+  };
+  const revisiones = { director, decano: revisionNueva() };
+  if (conDepartamento) revisiones.departamento = revisionNueva();
+  return {
+    valor: viejo.valor || "",
+    fechaEdicion: viejo.fechaEdicion ?? null,
+    textoActualizado: Boolean(viejo.textoActualizado),
+    revisiones,
+  };
+}
+
+module.exports = {
+  leerAsignaturas,
+  componenteNuevo,
+  revisionNueva,
+  migrarComponenteAntiguo,
+  normalizarTexto,
+};

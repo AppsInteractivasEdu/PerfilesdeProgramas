@@ -12,6 +12,7 @@ const path = require("path");
 const admin = require("firebase-admin");
 const XLSX = require("xlsx");
 const { leerAsignaturas, componenteNuevo, normalizarTexto } = require("./lib_excel.cjs");
+const { construirMapaAsignacion } = require("./datos_departamentos.cjs");
 
 const RAIZ = path.resolve(__dirname, "..");
 admin.initializeApp({ credential: admin.credential.cert(require(path.join(RAIZ, "serviceAccountKey.json"))) });
@@ -21,6 +22,7 @@ const credenciales = JSON.parse(fs.readFileSync(path.join(__dirname, "credencial
 const porNombrePrograma = new Map(
   credenciales.filter((c) => c.rol === "director").map((c) => [c.nombrePrograma, c])
 );
+const mapaAsignacionDepartamento = construirMapaAsignacion();
 
 async function main() {
   const filas = leerAsignaturas(XLSX.readFile(path.join(RAIZ, "data", "tabla_resultado.xlsx")));
@@ -37,6 +39,7 @@ async function main() {
       continue;
     }
     const docId = `${credencial.programaId}__${normalizarTexto(f.nombreAsignatura)}`;
+    const conDepartamento = mapaAsignacionDepartamento.has(docId);
     const ref = db.collection("asignaturas").doc(docId);
     const snap = await ref.get();
     if (!snap.exists) {
@@ -48,7 +51,7 @@ async function main() {
     const cambios = {};
     for (const [clave, valor] of Object.entries(f.componentes)) {
       if (!actuales[clave]) {
-        cambios[`componentes.${clave}`] = componenteNuevo(valor);
+        cambios[`componentes.${clave}`] = componenteNuevo(valor, { conDepartamento });
         cuenta.componentesCreados++;
       } else if ((actuales[clave].valor ?? "") !== valor) {
         cambios[`componentes.${clave}.valor`] = valor;

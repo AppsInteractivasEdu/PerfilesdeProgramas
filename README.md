@@ -1,9 +1,10 @@
 # Perfiles Docentes · Departamento de Pedagogía
 
-Aplicativo web para que cada director de programa revise (apruebe o sugiera
-cambios) los perfiles docentes de sus asignaturas, y para que el
-administrador del Departamento de Pedagogía valide esas sugerencias y
-descargue consolidados en PDF y Excel.
+Aplicativo web para revisar (aprobar o sugerir cambios) los perfiles
+docentes de las asignaturas de los 10 programas, desde varios roles —
+director de programa, departamento, decano — y para que el Director de
+Departamento de Pedagogía valide esas sugerencias y descargue consolidados
+en PDF y Excel.
 
 - **Frontend:** React + Vite + Tailwind CSS (con modo nocturno)
 - **Backend:** Firebase (Authentication + Firestore), plan gratuito Spark
@@ -40,6 +41,12 @@ npm install
 ## 3. Publicar las reglas de seguridad de Firestore
 
 En Firebase Console → Firestore Database → pestaña "Reglas", pega el contenido de [`firestore.rules`](./firestore.rules) y publica. (También puedes hacerlo con la CLI de Firebase si la instalas: `firebase deploy --only firestore:rules`.)
+
+> **Si ya tenías el proyecto funcionando y este archivo cambió** (por
+> ejemplo, al agregar los roles de departamento y decano), tienes que
+> volver a publicar las reglas en Firebase Console — si no, las cuentas
+> nuevas reciben "Missing or insufficient permissions" al intentar leer las
+> asignaturas, aunque el usuario y la contraseña sean correctos.
 
 ## 4. Cargar los datos iniciales (usuarios + asignaturas)
 
@@ -113,32 +120,64 @@ adelante si la necesitas).
 
 ## Cómo funciona
 
+Cada asignatura tiene varios componentes (Formación de pregrado, Formación
+posgradual, Experiencia docente y profesional, Competencias, Criterio de
+idoneidad). Desde la versión con **departamentos** y **decano**, cada
+componente puede recibir una revisión **independiente** de hasta tres
+fuentes (todas llegan igual al Director de Departamento para su
+aprobación):
+
 - **Director de programa:** ve solo las asignaturas de su propio programa.
-  Por cada asignatura, 4 componentes (Formación de pregrado, Formación
-  posgradual, Experiencia docente y profesional, Competencias), cada uno con
-  botones **Aprobar** y **Modificar** (este último abre un cuadro de texto
-  obligatorio y un botón Guardar). Puede descargar un PDF con únicamente las
-  asignaturas que tengan algún componente marcado para modificar.
-- **Administrador:** ve, por programa, solo los componentes con solicitud de
-  modificación pendiente. Por cada uno: **Aprobar modificación** o
-  **Rechazar** (este último exige un comentario). Puede descargar el
-  consolidado completo (todos los programas) en PDF y en Excel.
+  Aprueba cada componente o lo manda a **Modificar** (abre un cuadro de
+  texto obligatorio). Puede descargar un PDF con las asignaturas que tengan
+  algún componente marcado para modificar.
+- **Departamento** (p. ej. Matemática y Estadística, Química, Física,
+  Ciencias Biológicas): ve solo las asignaturas que tiene asignadas, que
+  pueden pertenecer a varios programas (ver
+  `scripts/datos_departamentos.cjs`). Revisa igual que un director: Aprobar
+  o Modificar, de forma independiente a la revisión del director de ese
+  programa.
+- **Decano de la Facultad de Educación:** ve y revisa **todas** las
+  asignaturas de los 10 programas, con filtro por programa y buscador. Su
+  revisión también es independiente de la del director y del departamento.
+- **Director de Departamento (administrador):** en cada asignatura, un
+  selector **"Ver componente"** le permite ubicarse en uno concreto (p. ej.
+  Formación de pregrado) y ver ahí mismo la revisión de cada fuente
+  aplicable (Director de programa / Departamento si existe / Decano), con
+  botones para **Aprobar modificación** o **Rechazar** cada una por
+  separado, y un botón para **editar el texto** del componente. Descarga el
+  consolidado completo (todos los programas, con la columna "Origen" que
+  dice de qué revisor vino cada sugerencia) en PDF y en Excel.
 - **Modo nocturno:** botón en la barra superior, se recuerda entre sesiones.
+
+### Quién revisa qué asignatura
+
+La asignación de asignaturas a departamentos vive en
+[`scripts/datos_departamentos.cjs`](./scripts/datos_departamentos.cjs)
+(generada a partir de una hoja de Excel que entregó el Departamento). Para
+cambiarla, edita ese archivo y vuelve a correr `npm run seed` (no borra
+revisiones ya hechas).
 
 ## Estructura del proyecto
 
 ```
-├── data/tabla_resultado.xlsx   # datos de origen (perfiles docentes)
+├── data/
+│   ├── tabla_resultado.xlsx          # datos de origen (perfiles docentes)
+│   └── distribucion_departamentos.xlsx  # de dónde sale datos_departamentos.cjs
 ├── scripts/
-│   ├── credenciales.json       # (no en git) usuarios y contraseñas generados
-│   └── seed.cjs                 # carga inicial a Firebase
+│   ├── credenciales.json             # (no en git) usuarios y contraseñas generados
+│   ├── datos_departamentos.cjs       # qué asignaturas quedan en cada departamento
+│   ├── generar_credenciales.cjs      # genera credenciales.json
+│   ├── seed.cjs                       # carga inicial / migración a Firebase
+│   └── sincronizar_textos.cjs        # actualiza solo los textos desde el Excel
 ├── src/
-│   ├── context/                 # autenticación y tema (modo nocturno)
-│   ├── pages/                   # Login, DirectorDashboard, AdminDashboard
-│   ├── components/               # piezas de UI reutilizables
-│   ├── services/                 # lectura/escritura en Firestore
-│   └── utils/                    # exportar PDF/Excel, constantes
-└── firestore.rules               # reglas de seguridad
+│   ├── context/                       # autenticación y tema (modo nocturno)
+│   ├── pages/                         # Login, DirectorDashboard, DepartamentoDashboard,
+│   │                                    DecanoDashboard, AdminDashboard
+│   ├── components/                     # piezas de UI reutilizables
+│   ├── services/                       # lectura/escritura en Firestore
+│   └── utils/                          # exportar PDF/Excel, constantes
+└── firestore.rules                     # reglas de seguridad
 ```
 
 ## Nota sobre las reglas de seguridad

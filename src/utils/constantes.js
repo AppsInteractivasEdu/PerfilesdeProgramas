@@ -1,4 +1,4 @@
-export const ESTADO_DIRECTOR = {
+export const ESTADO_REVISOR = {
   PENDIENTE: "pendiente",
   APROBADO: "aprobado",
   MODIFICAR: "modificar",
@@ -11,6 +11,31 @@ export const ESTADO_ADMIN = {
 };
 
 export const ROL_ADMIN_NOMBRE = "Director de Departamento";
+
+/** Los tres tipos de revisor que puede tener un componente. */
+export const REVISOR = {
+  DIRECTOR: "director",
+  DEPARTAMENTO: "departamento",
+  DECANO: "decano",
+};
+
+export const ETIQUETA_REVISOR = {
+  [REVISOR.DIRECTOR]: "Director de programa",
+  [REVISOR.DEPARTAMENTO]: "Departamento",
+  [REVISOR.DECANO]: "Decano",
+};
+
+/**
+ * Revisores que aplican a una asignatura: siempre el director de programa y
+ * el decano; el departamento solo si la asignatura tiene un departamento
+ * asociado (asignatura.departamentoId).
+ */
+export function revisoresDeAsignatura(asignatura) {
+  const lista = [REVISOR.DIRECTOR];
+  if (asignatura?.departamentoId) lista.push(REVISOR.DEPARTAMENTO);
+  lista.push(REVISOR.DECANO);
+  return lista;
+}
 
 const FIJOS = [
   { clave: "pregrado", etiqueta: "Formación de pregrado" },

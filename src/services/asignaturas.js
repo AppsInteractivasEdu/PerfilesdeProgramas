@@ -15,11 +15,19 @@ function porOrden(a, b) {
   return (a.orden ?? 0) - (b.orden ?? 0);
 }
 import { db } from "../firebase.js";
-import { ESTADO_ADMIN, ESTADO_DIRECTOR } from "../utils/constantes.js";
+import { ESTADO_ADMIN, ESTADO_REVISOR } from "../utils/constantes.js";
 
-/** Suscribe en tiempo real a la lista de programas (para el selector del admin). */
+/** Suscribe en tiempo real a la lista de programas (para el selector del admin/decano). */
 export function suscribirProgramas(cb) {
   const q = query(collection(db, "programas"), orderBy("nombre", "asc"));
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+}
+
+/** Suscribe en tiempo real a la lista de departamentos. */
+export function suscribirDepartamentos(cb) {
+  const q = query(collection(db, "departamentos"), orderBy("nombre", "asc"));
   return onSnapshot(q, (snap) => {
     cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   });
@@ -36,7 +44,15 @@ export function suscribirAsignaturasPorPrograma(programaId, cb) {
   });
 }
 
-/** Suscribe en tiempo real a TODAS las asignaturas (panel de administrador). */
+/** Suscribe en tiempo real a las asignaturas asignadas a un departamento (pueden ser de varios programas). */
+export function suscribirAsignaturasPorDepartamento(departamentoId, cb) {
+  const q = query(collection(db, "asignaturas"), where("departamentoId", "==", departamentoId));
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(porOrden));
+  });
+}
+
+/** Suscribe en tiempo real a TODAS las asignaturas (panel de administrador y del decano). */
 export function suscribirTodasLasAsignaturas(cb) {
   const q = query(collection(db, "asignaturas"), orderBy("programaId", "asc"));
   return onSnapshot(q, (snap) => {
@@ -49,67 +65,74 @@ async function leerComponente(ref, clave) {
   return snap.data()?.componentes?.[clave] || {};
 }
 
-/** Una sugerencia ya resuelta por el Director de Departamento (aprobada o rechazada). */
-function cicloCerrado(c) {
-  return c.estadoDirector === ESTADO_DIRECTOR.MODIFICAR && (c.estadoAdmin || ESTADO_ADMIN.PENDIENTE) !== ESTADO_ADMIN.PENDIENTE;
+function leerRevision(componente, revisor) {
+  return componente?.revisiones?.[revisor] || {};
 }
 
-/** Guarda la sugerencia resuelta en el historial para que no se pierda de los consolidados. */
-function archivarCiclo(clave, c) {
+/** Una sugerencia ya resuelta por el Director de Departamento (aprobada o rechazada). */
+function cicloCerrado(rev) {
+  return rev.estado === ESTADO_REVISOR.MODIFICAR && (rev.estadoAdmin || ESTADO_ADMIN.PENDIENTE) !== ESTADO_ADMIN.PENDIENTE;
+}
+
+/** Guarda la sugerencia resuelta en el historial de ese revisor para que no se pierda de los consolidados. */
+function archivarCiclo(clave, revisor, rev) {
   return {
-    [`componentes.${clave}.historial`]: arrayUnion({
-      sugerencia: c.comentarioDirector || "",
-      estadoAdmin: c.estadoAdmin,
-      comentarioAdmin: c.comentarioAdmin || "",
+    [`componentes.${clave}.revisiones.${revisor}.historial`]: arrayUnion({
+      sugerencia: rev.comentario || "",
+      estadoAdmin: rev.estadoAdmin,
+      comentarioAdmin: rev.comentarioAdmin || "",
       fecha: new Date().toISOString(),
     }),
   };
 }
 
-function reiniciarRevision(clave) {
+function reiniciarRevision(clave, revisor) {
   return {
-    [`componentes.${clave}.estadoDirector`]: ESTADO_DIRECTOR.PENDIENTE,
-    [`componentes.${clave}.comentarioDirector`]: "",
-    [`componentes.${clave}.fechaDirector`]: null,
-    [`componentes.${clave}.estadoAdmin`]: ESTADO_ADMIN.PENDIENTE,
-    [`componentes.${clave}.comentarioAdmin`]: "",
-    [`componentes.${clave}.fechaAdmin`]: null,
+    [`componentes.${clave}.revisiones.${revisor}.estado`]: ESTADO_REVISOR.PENDIENTE,
+    [`componentes.${clave}.revisiones.${revisor}.comentario`]: "",
+    [`componentes.${clave}.revisiones.${revisor}.fecha`]: null,
+    [`componentes.${clave}.revisiones.${revisor}.estadoAdmin`]: ESTADO_ADMIN.PENDIENTE,
+    [`componentes.${clave}.revisiones.${revisor}.comentarioAdmin`]: "",
+    [`componentes.${clave}.revisiones.${revisor}.fechaAdmin`]: null,
   };
 }
 
-/** El director aprueba un componente tal como está. */
-export async function aprobarComponenteDirector(asignaturaId, clave) {
+/** El revisor (director de programa, departamento o decano) aprueba un componente tal como está. */
+export async function aprobarComponente(asignaturaId, clave, revisor) {
   const ref = doc(db, "asignaturas", asignaturaId);
   const actual = await leerComponente(ref, clave);
+  const rev = leerRevision(actual, revisor);
   await updateDoc(ref, {
-    ...(cicloCerrado(actual) ? archivarCiclo(clave, actual) : {}),
-    ...reiniciarRevision(clave),
-    [`componentes.${clave}.estadoDirector`]: ESTADO_DIRECTOR.APROBADO,
-    [`componentes.${clave}.fechaDirector`]: serverTimestamp(),
+    ...(cicloCerrado(rev) ? archivarCiclo(clave, revisor, rev) : {}),
+    ...reiniciarRevision(clave, revisor),
+    [`componentes.${clave}.revisiones.${revisor}.estado`]: ESTADO_REVISOR.APROBADO,
+    [`componentes.${clave}.revisiones.${revisor}.fecha`]: serverTimestamp(),
     [`componentes.${clave}.textoActualizado`]: false,
   });
 }
 
-/** El director envía una sugerencia de modificación con comentario obligatorio. */
-export async function enviarSugerenciaDirector(asignaturaId, clave, comentario) {
+/** El revisor envía una sugerencia de modificación con comentario obligatorio. */
+export async function enviarSugerencia(asignaturaId, clave, revisor, comentario) {
   const ref = doc(db, "asignaturas", asignaturaId);
   const actual = await leerComponente(ref, clave);
+  const rev = leerRevision(actual, revisor);
   await updateDoc(ref, {
-    ...(cicloCerrado(actual) ? archivarCiclo(clave, actual) : {}),
-    [`componentes.${clave}.estadoDirector`]: ESTADO_DIRECTOR.MODIFICAR,
-    [`componentes.${clave}.comentarioDirector`]: comentario,
-    [`componentes.${clave}.fechaDirector`]: serverTimestamp(),
+    ...(cicloCerrado(rev) ? archivarCiclo(clave, revisor, rev) : {}),
+    [`componentes.${clave}.revisiones.${revisor}.estado`]: ESTADO_REVISOR.MODIFICAR,
+    [`componentes.${clave}.revisiones.${revisor}.comentario`]: comentario,
+    [`componentes.${clave}.revisiones.${revisor}.fecha`]: serverTimestamp(),
     // una nueva sugerencia reabre la revisión del Director de Departamento
-    [`componentes.${clave}.estadoAdmin`]: ESTADO_ADMIN.PENDIENTE,
-    [`componentes.${clave}.comentarioAdmin`]: "",
+    [`componentes.${clave}.revisiones.${revisor}.estadoAdmin`]: ESTADO_ADMIN.PENDIENTE,
+    [`componentes.${clave}.revisiones.${revisor}.comentarioAdmin`]: "",
     [`componentes.${clave}.textoActualizado`]: false,
   });
 }
 
 /**
  * El Director de Departamento edita el texto de cualquier componente.
- * Si el director ya lo había aprobado, o si su sugerencia fue aprobada y ahora
- * se aplica, el componente vuelve al director como "por aprobar".
+ * Para cada revisor (director/departamento/decano) que ya lo había aprobado,
+ * o cuya sugerencia fue aprobada y aplicada, esa revisión vuelve a quedar
+ * "por aprobar" otra vez, porque el texto que vieron ya no es el mismo.
  */
 export async function editarTextoComponente(asignaturaId, clave, texto) {
   const ref = doc(db, "asignaturas", asignaturaId);
@@ -124,39 +147,37 @@ export async function editarTextoComponente(asignaturaId, clave, texto) {
     await updateDoc(ref, campos);
     return;
   }
-  const sugerenciaAplicada =
-    actual.estadoDirector === ESTADO_DIRECTOR.MODIFICAR && actual.estadoAdmin === ESTADO_ADMIN.APROBADO;
-  const eraAprobado = actual.estadoDirector === ESTADO_DIRECTOR.APROBADO;
-
-  if (sugerenciaAplicada || eraAprobado) {
-    Object.assign(
-      campos,
-      sugerenciaAplicada ? archivarCiclo(clave, actual) : {},
-      reiniciarRevision(clave),
-      { [`componentes.${clave}.textoActualizado`]: true }
-    );
-  } else if ((actual.estadoDirector || ESTADO_DIRECTOR.PENDIENTE) === ESTADO_DIRECTOR.PENDIENTE) {
-    campos[`componentes.${clave}.textoActualizado`] = true;
+  for (const [revisor, rev] of Object.entries(actual.revisiones || {})) {
+    const sugerenciaAplicada = rev.estado === ESTADO_REVISOR.MODIFICAR && rev.estadoAdmin === ESTADO_ADMIN.APROBADO;
+    const eraAprobado = rev.estado === ESTADO_REVISOR.APROBADO;
+    if (sugerenciaAplicada || eraAprobado) {
+      Object.assign(
+        campos,
+        sugerenciaAplicada ? archivarCiclo(clave, revisor, rev) : {},
+        reiniciarRevision(clave, revisor)
+      );
+    }
   }
+  campos[`componentes.${clave}.textoActualizado`] = true;
   await updateDoc(ref, campos);
 }
 
-/** El administrador aprueba la modificación solicitada por el director. */
-export async function aprobarSolicitudAdmin(asignaturaId, clave) {
+/** El Director de Departamento aprueba la modificación solicitada por un revisor. */
+export async function aprobarSolicitudAdmin(asignaturaId, clave, revisor) {
   const ref = doc(db, "asignaturas", asignaturaId);
   await updateDoc(ref, {
-    [`componentes.${clave}.estadoAdmin`]: ESTADO_ADMIN.APROBADO,
-    [`componentes.${clave}.comentarioAdmin`]: "",
-    [`componentes.${clave}.fechaAdmin`]: serverTimestamp(),
+    [`componentes.${clave}.revisiones.${revisor}.estadoAdmin`]: ESTADO_ADMIN.APROBADO,
+    [`componentes.${clave}.revisiones.${revisor}.comentarioAdmin`]: "",
+    [`componentes.${clave}.revisiones.${revisor}.fechaAdmin`]: serverTimestamp(),
   });
 }
 
-/** El administrador rechaza la modificación, con comentario obligatorio. */
-export async function rechazarSolicitudAdmin(asignaturaId, clave, comentario) {
+/** El Director de Departamento rechaza la modificación, con comentario obligatorio. */
+export async function rechazarSolicitudAdmin(asignaturaId, clave, revisor, comentario) {
   const ref = doc(db, "asignaturas", asignaturaId);
   await updateDoc(ref, {
-    [`componentes.${clave}.estadoAdmin`]: ESTADO_ADMIN.RECHAZADO,
-    [`componentes.${clave}.comentarioAdmin`]: comentario,
-    [`componentes.${clave}.fechaAdmin`]: serverTimestamp(),
+    [`componentes.${clave}.revisiones.${revisor}.estadoAdmin`]: ESTADO_ADMIN.RECHAZADO,
+    [`componentes.${clave}.revisiones.${revisor}.comentarioAdmin`]: comentario,
+    [`componentes.${clave}.revisiones.${revisor}.fechaAdmin`]: serverTimestamp(),
   });
 }

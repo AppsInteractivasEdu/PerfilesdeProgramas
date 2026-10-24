@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import AsignaturaCard from "../components/AsignaturaCard.jsx";
 import { suscribirAsignaturasPorPrograma } from "../services/asignaturas.js";
-import { ESTADO_DIRECTOR, listarComponentes } from "../utils/constantes.js";
+import { ESTADO_REVISOR, listarComponentes } from "../utils/constantes.js";
 import { exportarPdfDirector } from "../utils/exportPdf.js";
 
 export default function DirectorDashboard() {
@@ -25,12 +25,12 @@ export default function DirectorDashboard() {
     const filas = [];
     for (const a of asignaturas) {
       for (const { clave, etiqueta } of listarComponentes(a.componentes)) {
-        const comp = a.componentes?.[clave];
-        if (comp?.estadoDirector === ESTADO_DIRECTOR.MODIFICAR) {
+        const rev = a.componentes?.[clave]?.revisiones?.director;
+        if (rev?.estado === ESTADO_REVISOR.MODIFICAR) {
           filas.push({
             asignatura: a.nombre,
             componente: etiqueta,
-            comentario: comp.comentarioDirector || "",
+            comentario: rev.comentario || "",
           });
         }
       }
@@ -95,7 +95,7 @@ export default function DirectorDashboard() {
         ) : (
           <div className="space-y-3">
             {asignaturasFiltradas.map((a) => (
-              <AsignaturaCard key={a.id} asignatura={a} />
+              <AsignaturaCard key={a.id} asignatura={a} revisor="director" />
             ))}
           </div>
         )}

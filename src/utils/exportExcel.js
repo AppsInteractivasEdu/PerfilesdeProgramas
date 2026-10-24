@@ -27,7 +27,8 @@ export function exportarExcelAdmin(filas, nombreArchivo) {
       Programa: f.programa,
       Asignatura: f.asignatura,
       Componente: f.componente,
-      "Comentario del director": f.comentarioDirector,
+      Origen: f.origen || "Director de programa",
+      Comentario: f.comentarioDirector,
       Estado: f.estadoAdmin,
       "Comentario del Director de Departamento": f.comentarioAdmin || "",
     }))
@@ -36,6 +37,7 @@ export function exportarExcelAdmin(filas, nombreArchivo) {
     { wch: 28 },
     { wch: 40 },
     { wch: 28 },
+    { wch: 20 },
     { wch: 50 },
     { wch: 14 },
     { wch: 50 },

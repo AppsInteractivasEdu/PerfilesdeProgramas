@@ -7,9 +7,11 @@ import {
 } from "../services/asignaturas.js";
 import {
   ESTADO_ADMIN,
-  ESTADO_DIRECTOR,
+  ESTADO_REVISOR,
+  ETIQUETA_REVISOR,
   ROL_ADMIN_NOMBRE,
   listarComponentes,
+  revisoresDeAsignatura,
 } from "../utils/constantes.js";
 import { exportarPdfAdmin } from "../utils/exportPdf.js";
 import { exportarExcelAdmin } from "../utils/exportExcel.js";
@@ -17,15 +19,19 @@ import { exportarExcelAdmin } from "../utils/exportExcel.js";
 const CAMPO =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-institucional-navy focus:ring-2 focus:ring-institucional-navy/30 dark:border-slate-600 dark:bg-slate-800 dark:focus:border-institucional-gold dark:focus:ring-institucional-gold/30";
 
-/** Solicitudes de modificación de una asignatura: total y pendientes de resolver. */
+/** Solicitudes de modificación de una asignatura (de cualquier revisor): total y pendientes de resolver. */
 function resumenSolicitudes(asignatura) {
   let total = 0;
   let pendientes = 0;
+  const revisores = revisoresDeAsignatura(asignatura);
   for (const { clave } of listarComponentes(asignatura.componentes)) {
-    const comp = asignatura.componentes?.[clave];
-    if (comp?.estadoDirector === ESTADO_DIRECTOR.MODIFICAR) {
-      total++;
-      if ((comp.estadoAdmin || ESTADO_ADMIN.PENDIENTE) === ESTADO_ADMIN.PENDIENTE) pendientes++;
+    const revisiones = asignatura.componentes?.[clave]?.revisiones || {};
+    for (const revisor of revisores) {
+      const rev = revisiones[revisor];
+      if (rev?.estado === ESTADO_REVISOR.MODIFICAR) {
+        total++;
+        if ((rev.estadoAdmin || ESTADO_ADMIN.PENDIENTE) === ESTADO_ADMIN.PENDIENTE) pendientes++;
+      }
     }
   }
   return { total, pendientes };
@@ -89,14 +95,17 @@ export default function AdminDashboard() {
 
   const seleccionada = asignaturas.find((a) => a.id === seleccionadaId) || null;
 
-  /** Todas las solicitudes de modificación, con su estado, para los reportes. */
+  /** Todas las solicitudes de modificación, de cualquier revisor, con su estado, para los reportes. */
   const todasLasSolicitudes = useMemo(() => {
     const filas = [];
     for (const a of ordenadas) {
+      const revisores = revisoresDeAsignatura(a);
       for (const { clave, etiqueta } of listarComponentes(a.componentes)) {
-        const comp = a.componentes?.[clave];
-        for (const h of comp?.historial || []) {
-          filas.push({
+        const revisiones = a.componentes?.[clave]?.revisiones || {};
+        for (const revisor of revisores) {
+          const rev = revisiones[revisor];
+          if (!rev) continue;
+          const base = {
             asignaturaId: a.id,
             programaId: a.programaId,
             programa: a.nombrePrograma || a.programaId,
@@ -104,24 +113,25 @@ export default function AdminDashboard() {
             clave,
             etiqueta,
             componente: etiqueta,
-            comentarioDirector: h.sugerencia || "",
-            estadoAdmin: h.estadoAdmin,
-            comentarioAdmin: h.comentarioAdmin || "",
-          });
-        }
-        if (comp?.estadoDirector === ESTADO_DIRECTOR.MODIFICAR) {
-          filas.push({
-            asignaturaId: a.id,
-            programaId: a.programaId,
-            programa: a.nombrePrograma || a.programaId,
-            asignatura: a.nombre,
-            clave,
-            etiqueta,
-            componente: etiqueta,
-            comentarioDirector: comp.comentarioDirector || "",
-            estadoAdmin: comp.estadoAdmin || ESTADO_ADMIN.PENDIENTE,
-            comentarioAdmin: comp.comentarioAdmin || "",
-          });
+            revisor,
+            origen: ETIQUETA_REVISOR[revisor],
+          };
+          for (const h of rev.historial || []) {
+            filas.push({
+              ...base,
+              comentarioDirector: h.sugerencia || "",
+              estadoAdmin: h.estadoAdmin,
+              comentarioAdmin: h.comentarioAdmin || "",
+            });
+          }
+          if (rev.estado === ESTADO_REVISOR.MODIFICAR) {
+            filas.push({
+              ...base,
+              comentarioDirector: rev.comentario || "",
+              estadoAdmin: rev.estadoAdmin || ESTADO_ADMIN.PENDIENTE,
+              comentarioAdmin: rev.comentarioAdmin || "",
+            });
+          }
         }
       }
     }

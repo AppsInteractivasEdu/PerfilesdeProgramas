@@ -1,14 +1,16 @@
 import { useState } from "react";
 import ContenidoAsignatura from "./ContenidoAsignatura.jsx";
-import { ESTADO_DIRECTOR, listarComponentes } from "../utils/constantes.js";
+import { ESTADO_REVISOR, listarComponentes } from "../utils/constantes.js";
 
-export default function AsignaturaCard({ asignatura }) {
+/** Tarjeta plegable de una asignatura, usada por los paneles de director, departamento y decano. */
+export default function AsignaturaCard({ asignatura, revisor = "director" }) {
   const [abierta, setAbierta] = useState(false);
 
   const componentes = asignatura.componentes || {};
-  const pendientes = listarComponentes(componentes, { incluirIdoneidad: false }).filter(
-    (c) => (componentes[c.clave]?.estadoDirector || ESTADO_DIRECTOR.PENDIENTE) === ESTADO_DIRECTOR.PENDIENTE
-  ).length;
+  const pendientes = listarComponentes(componentes, { incluirIdoneidad: false }).filter((c) => {
+    const rev = componentes[c.clave]?.revisiones?.[revisor];
+    return (rev?.estado || ESTADO_REVISOR.PENDIENTE) === ESTADO_REVISOR.PENDIENTE;
+  }).length;
 
   return (
     <div className="card overflow-hidden">
@@ -21,6 +23,11 @@ export default function AsignaturaCard({ asignatura }) {
         <span aria-hidden="true" />
         <span className="text-center font-semibold text-slate-800 dark:text-slate-100">
           Asignatura: {asignatura.nombre}
+          {asignatura.nombrePrograma && (
+            <span className="block text-xs font-normal text-slate-400 dark:text-slate-500">
+              {asignatura.nombrePrograma}
+            </span>
+          )}
         </span>
         <span className="flex items-center justify-end gap-3">
           {pendientes > 0 && <span className="badge-pending">{pendientes} por revisar</span>}
@@ -30,7 +37,7 @@ export default function AsignaturaCard({ asignatura }) {
 
       {abierta && (
         <div className="border-t border-slate-200 p-5 dark:border-slate-700">
-          <ContenidoAsignatura asignatura={asignatura} rol="director" />
+          <ContenidoAsignatura asignatura={asignatura} rol={revisor} />
           <div className="mt-6 flex justify-center border-t border-slate-200 pt-4 dark:border-slate-700">
             <button type="button" className="btn-secondary" onClick={() => setAbierta(false)}>
               ▲ Recoger
