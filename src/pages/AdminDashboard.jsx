@@ -253,7 +253,14 @@ export default function AdminDashboard() {
               <select
                 aria-label="Filtrar por programa"
                 value={programaFiltro}
-                onChange={(e) => setProgramaFiltro(e.target.value)}
+                onChange={(e) => {
+                  // Simétrico al filtro de departamento: al elegir un
+                  // programa se vuelve a "Todos los departamentos", para ver
+                  // completas las asignaturas de ese programa (algunas son
+                  // de un departamento, otras no).
+                  setProgramaFiltro(e.target.value);
+                  setDepartamentoFiltro("");
+                }}
                 className={CAMPO}
               >
                 <option value="">Todos los programas</option>
