@@ -49,13 +49,15 @@ function claseTarjeta(resaltar) {
  * decano). Lo usa el admin (con Aprobar/Rechazar) y, en soloLectura, el
  * decano para ver —sin poder resolver— las sugerencias de los demás.
  */
-function PanelRevisor({ revisor, rev, onAprobarModificacion, onRechazar, soloLectura = false }) {
+function PanelRevisor({ revisor, rev, onAprobarModificacion, onRechazar, onRevisar, soloLectura = false }) {
   const [mostrarRechazo, setMostrarRechazo] = useState(false);
   const estado = rev?.estado || ESTADO_REVISOR.PENDIENTE;
   const estadoAdmin = rev?.estadoAdmin || ESTADO_ADMIN.PENDIENTE;
   const pidioModificar = estado === ESTADO_REVISOR.MODIFICAR;
   const fueRechazado = pidioModificar && estadoAdmin === ESTADO_ADMIN.RECHAZADO;
   const puedeResolver = !soloLectura && pidioModificar && estadoAdmin === ESTADO_ADMIN.PENDIENTE;
+  const sinRevisar = estado === ESTADO_REVISOR.PENDIENTE;
+  const mostrarBotonRevisar = !soloLectura && sinRevisar && typeof onRevisar === "function";
 
   return (
     <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700/80 dark:bg-slate-800/40">
@@ -63,7 +65,13 @@ function PanelRevisor({ revisor, rev, onAprobarModificacion, onRechazar, soloLec
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           {ETIQUETA_REVISOR[revisor]}
         </p>
-        <Badge estado={estado} estadoAdmin={estadoAdmin} textoActualizado={false} paraAdmin />
+        {mostrarBotonRevisar ? (
+          <button type="button" className="btn-modify px-2.5 py-1 text-xs" onClick={onRevisar}>
+            Revisar
+          </button>
+        ) : (
+          <Badge estado={estado} estadoAdmin={estadoAdmin} textoActualizado={false} paraAdmin />
+        )}
       </div>
 
       {pidioModificar && rev?.comentario && (
@@ -119,6 +127,7 @@ export default function ComponenteBlock({
   etiqueta,
   tipo = "fijo",
   componente,
+  clave,
   rol = "director",
   tituloContexto = "",
   revisorActivo,
@@ -128,6 +137,7 @@ export default function ComponenteBlock({
   onEnviarSugerencia,
   onAprobarModificacion,
   onRechazar,
+  onRevisar,
 }) {
   const [editandoSugerencia, setEditandoSugerencia] = useState(false);
   const [textoSugerencia, setTextoSugerencia] = useState("");
@@ -192,6 +202,7 @@ export default function ComponenteBlock({
               rev={revisiones[revisor]}
               onAprobarModificacion={() => onAprobarModificacion(revisor)}
               onRechazar={(comentario) => onRechazar(revisor, comentario)}
+              onRevisar={hayModificacionPendiente && onRevisar ? () => onRevisar(clave) : undefined}
             />
           ))}
         </div>

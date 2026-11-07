@@ -74,6 +74,7 @@ export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
       rol={rol}
       tipo={tipo}
       etiqueta={etiqueta}
+      clave={clave}
       tituloContexto={asignatura.id}
       componente={componentes[clave]}
       revisorActivo={revisorActivo}
@@ -83,6 +84,7 @@ export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
       onEnviarSugerencia={(revisor, texto) => enviarSugerencia(asignatura.id, clave, revisor, texto)}
       onAprobarModificacion={(revisor) => aprobarSolicitudAdmin(asignatura.id, clave, revisor)}
       onRechazar={(revisor, comentario) => rechazarSolicitudAdmin(asignatura.id, clave, revisor, comentario)}
+      onRevisar={esAdmin ? (claveComponente) => setFiltroClave(claveComponente) : undefined}
     />
   );
 
