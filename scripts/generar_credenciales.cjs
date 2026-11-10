@@ -4,6 +4,7 @@
 //   - director.<programa>@...      (10 directores de programa)
 //   - departamento.<id>@...        (departamentos con asignaturas asignadas)
 //   - decano@...                   (Decano de la Facultad de Educación)
+//   - viceacademica@...            (Vicerrectoría Académica: observador, no puede sugerir/aprobar)
 //   - adminpedagogia@...           (Director de Departamento / administrador)
 const fs = require("fs");
 const path = require("path");
@@ -51,6 +52,14 @@ credenciales.push({
   rol: "decano",
   email: `decano@${DOMINIO}`,
   password: `decano2026`,
+});
+
+// Observador puro: ve todo lo mismo que el decano pero nunca puede
+// sugerir ni aprobar (firestore.rules solo le da permiso de lectura).
+credenciales.push({
+  rol: "viceacademico",
+  email: `viceacademica@${DOMINIO}`,
+  password: `viceacademica2026`,
 });
 
 credenciales.push({

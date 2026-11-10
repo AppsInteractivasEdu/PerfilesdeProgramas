@@ -6,8 +6,9 @@ rules_version = '2';
 //   - director:     programaId      (ve y revisa solo las asignaturas de su programa)
 //   - departamento: departamentoId  (ve y revisa solo las asignaturas asignadas a su departamento,
 //                                    que pueden ser de varios programas)
-//   - decano:       ninguno         (ve y revisa TODAS las asignaturas)
-//   - admin:        ninguno         ("Director de Departamento": ve y resuelve todo)
+//   - decano:        ninguno        (ve y revisa TODAS las asignaturas)
+//   - viceacademico: ninguno        (ve TODAS las asignaturas, solo lectura: nunca puede escribir)
+//   - admin:         ninguno        ("Director de Departamento": ve y resuelve todo)
 //
 // asignaturas/{id} guarda el contenido y, dentro de cada uno de sus
 // componentes, una revisión independiente por cada revisor aplicable
@@ -36,6 +37,13 @@ service cloud.firestore {
 
     function esDecano() {
       return autenticado() && perfil().rol == 'decano';
+    }
+
+    // Observador puro (p. ej. Vicerrectoría Académica): ve todo lo mismo que
+    // el decano, pero nunca puede escribir — por eso NO aparece en ninguna
+    // regla "allow update/write" de este archivo, solo en las de "read".
+    function esViceacademico() {
+      return autenticado() && perfil().rol == 'viceacademico';
     }
 
     function esDirectorDelPrograma(programaId) {
@@ -78,7 +86,7 @@ service cloud.firestore {
     // asignaturas: el director ve y actualiza solo las de su programa; el
     // departamento solo las que tiene asignadas; el decano y el admin, todas.
     match /asignaturas/{asignaturaId} {
-      allow read: if esAdmin() || esDecano()
+      allow read: if esAdmin() || esDecano() || esViceacademico()
         || esDirectorDelPrograma(resource.data.programaId)
         || esDepartamentoDe(resource.data.departamentoId);
 

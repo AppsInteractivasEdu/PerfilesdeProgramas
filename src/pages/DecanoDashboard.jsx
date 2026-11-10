@@ -28,8 +28,12 @@ function pendientesDelDecano(asignatura) {
  * que opinaron el director de programa y el departamento, y conserva su
  * propia revisión independiente (Aprobar/Modificar), que llega igual al
  * Director de Departamento para su aprobación.
+ *
+ * soloLectura=true: mismo panel, pero para un observador (p. ej.
+ * Vicerrectoría Académica) que no revisa nada — ve las tres columnas
+ * (director, departamento y decano) en solo lectura, sin columna propia.
  */
-export default function DecanoDashboard() {
+export default function DecanoDashboard({ soloLectura = false }) {
   const { perfil } = useAuth();
   const [programas, setProgramas] = useState([]);
   const [departamentos, setDepartamentos] = useState([]);
@@ -75,7 +79,7 @@ export default function DecanoDashboard() {
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     return asignaturas
-      .map((a) => ({ asignatura: a, pendientes: pendientesDelDecano(a) }))
+      .map((a) => ({ asignatura: a, pendientes: soloLectura ? 0 : pendientesDelDecano(a) }))
       .filter(
         ({ asignatura: a, pendientes }) =>
           (!programaFiltro || a.programaId === programaFiltro) &&
@@ -109,7 +113,14 @@ export default function DecanoDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-300 dark:bg-slate-950">
-      <Navbar titulo={perfil?.nombre} subtitulo="Panel del Decano de la Facultad de Educación" />
+      <Navbar
+        titulo={perfil?.nombre}
+        subtitulo={
+          soloLectura
+            ? "Panel de observación · Vicerrectoría Académica"
+            : "Panel del Decano de la Facultad de Educación"
+        }
+      />
 
       <main className="mx-auto w-full max-w-[2400px] space-y-4 px-4 py-6 sm:px-6 lg:px-8">
         <div className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -118,20 +129,22 @@ export default function DecanoDashboard() {
               Revisión de perfiles docentes · todos los programas
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Usa los filtros para ubicarte en un programa o departamento. Ves en solo lectura lo
-              que opinaron el director y el departamento; tu propia revisión queda a la espera de
-              la aprobación del Director de Departamento.
+              {soloLectura
+                ? "Usa los filtros para ubicarte en un programa o departamento. Ves en solo lectura lo que opinaron el director, el departamento y el decano; esta cuenta no puede aprobar ni sugerir cambios."
+                : "Usa los filtros para ubicarte en un programa o departamento. Ves en solo lectura lo que opinaron el director y el departamento; tu propia revisión queda a la espera de la aprobación del Director de Departamento."}
             </p>
           </div>
-          <button
-            type="button"
-            className="btn-primary shrink-0"
-            disabled={filasModificar.length === 0}
-            onClick={descargarPdf}
-          >
-            ⬇ Descargar reporte (PDF){" "}
-            {filasModificar.length > 0 && `(${filasModificar.length})`}
-          </button>
+          {!soloLectura && (
+            <button
+              type="button"
+              className="btn-primary shrink-0"
+              disabled={filasModificar.length === 0}
+              onClick={descargarPdf}
+            >
+              ⬇ Descargar reporte (PDF){" "}
+              {filasModificar.length > 0 && `(${filasModificar.length})`}
+            </button>
+          )}
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)] xl:grid-cols-[26rem_minmax(0,1fr)]">
@@ -170,15 +183,17 @@ export default function DecanoDashboard() {
                 placeholder="Buscar asignatura…"
                 className={CAMPO}
               />
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={soloPendientes}
-                  onChange={(e) => setSoloPendientes(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300"
-                />
-                Solo con componentes por revisar
-              </label>
+              {!soloLectura && (
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={soloPendientes}
+                    onChange={(e) => setSoloPendientes(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                  Solo con componentes por revisar
+                </label>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto">
@@ -241,7 +256,11 @@ export default function DecanoDashboard() {
                     {seleccionada.nombreDepartamento && ` · ${seleccionada.nombreDepartamento}`}
                   </p>
                 </div>
-                <ContenidoAsignatura key={seleccionada.id} asignatura={seleccionada} rol="decano" />
+                <ContenidoAsignatura
+                  key={seleccionada.id}
+                  asignatura={seleccionada}
+                  rol={soloLectura ? "viceacademico" : "decano"}
+                />
               </div>
             )}
           </section>

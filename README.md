@@ -54,9 +54,9 @@ En Firebase Console → Firestore Database → pestaña "Reglas", pega el conten
 npm run seed
 ```
 
-Esto, usando `scripts/credenciales.json` (ya generado, con los 10 usuarios de directores + 1 de administrador) y `data/tabla_resultado.xlsx`:
+Esto, usando `scripts/credenciales.json` (generado con `node scripts/generar_credenciales.cjs`: los 10 directores de programa, los departamentos, el decano, la Vicerrectoría Académica y el administrador) y `data/tabla_resultado.xlsx`:
 
-- crea los 11 usuarios en Firebase Authentication,
+- crea los usuarios en Firebase Authentication,
 - crea el catálogo de 10 programas en Firestore,
 - carga las ~240 asignaturas con sus 4 componentes cada una.
 
@@ -140,6 +140,11 @@ aprobación):
 - **Decano de la Facultad de Educación:** ve y revisa **todas** las
   asignaturas de los 10 programas, con filtro por programa y buscador. Su
   revisión también es independiente de la del director y del departamento.
+- **Vicerrectoría Académica (observador):** mismo panel que el decano (ve
+  **todas** las asignaturas de los 10 programas, con los mismos filtros),
+  pero en **solo lectura total**: ve lo que opinaron el director, el
+  departamento y el decano, sin ningún botón de Aprobar/Modificar. Ni la
+  interfaz ni las reglas de Firestore le permiten escribir nada.
 - **Director de Departamento (administrador):** en cada asignatura, un
   selector **"Ver componente"** le permite ubicarse en uno concreto (p. ej.
   Formación de pregrado) y ver ahí mismo la revisión de cada fuente

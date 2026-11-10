@@ -34,6 +34,9 @@ const CAMPO_FILTRO =
  * columna de aprobaciones/sugerencias (prop "rol" hace también de revisor).
  * El decano, además, ve en solo lectura lo que opinaron los demás revisores
  * de esa asignatura (sin poder aprobar/rechazar esas otras revisiones).
+ * rol="viceacademico": observador puro (p. ej. Vicerrectoría Académica) —
+ * ve las tres columnas (director, departamento y decano) en solo lectura,
+ * sin columna propia y sin poder aprobar/sugerir nada.
  * rol="admin": el Director de Departamento ve, por componente, la revisión
  * de cada revisor aplicable (director de programa, departamento si existe, y
  * decano), con un filtro para ubicarse rápido en un componente concreto.
@@ -42,11 +45,16 @@ export default function ContenidoAsignatura({ asignatura, rol = "director" }) {
   const componentes = asignatura.componentes || {};
   const listaCompleta = listarComponentes(componentes);
   const esAdmin = rol === "admin";
-  const revisorActivo = esAdmin ? null : rol;
+  const esObservador = rol === "viceacademico";
+  const revisorActivo = esAdmin || esObservador ? null : rol;
   const revisoresAplicables = useMemo(() => revisoresDeAsignatura(asignatura), [asignatura]);
   // El decano, además de su propia revisión, ve (sin poder aprobar/rechazar)
-  // lo que opinaron los demás revisores de esa asignatura.
-  const revisoresSoloLectura = rol === "decano" ? revisoresAplicables.filter((r) => r !== "decano") : [];
+  // lo que opinaron los demás revisores de esa asignatura. El observador no
+  // tiene columna propia: ve las tres (director, departamento y decano).
+  const revisoresSoloLectura =
+    rol === "decano" ? revisoresAplicables.filter((r) => r !== "decano")
+    : esObservador ? revisoresAplicables
+    : [];
 
   const [filtroClave, setFiltroClave] = useState("todos");
   const filtrandoUnComponente = esAdmin && filtroClave !== "todos";

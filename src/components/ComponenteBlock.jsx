@@ -117,6 +117,8 @@ function PanelRevisor({ revisor, rev, onAprobarModificacion, onRechazar, onRevis
  * Para rol="decano" además se puede pasar revisoresSoloLectura (p. ej.
  * ["director"]) para que vea, sin poder aprobar/rechazar, lo que opinaron
  * los demás revisores de esa asignatura.
+ * rol="viceacademico": observador puro, sin revisorActivo propio — recibe
+ * los tres revisores en revisoresSoloLectura y no muestra Aprobar/Modificar.
  * rol="admin": de SOLO LECTURA — muestra el texto original y la revisión de
  * cada revisor aplicable (prop revisoresAplicables), con Aprobar/Rechazar
  * para cada una. La edición del texto se hace aparte, en el recuadro
@@ -144,6 +146,7 @@ export default function ComponenteBlock({
   const [guardando, setGuardando] = useState(false);
 
   const esAdmin = rol === "admin";
+  const esObservador = rol === "viceacademico";
   const revisiones = componente?.revisiones || {};
   const textoActualizado = Boolean(componente?.textoActualizado);
 
@@ -176,7 +179,7 @@ export default function ComponenteBlock({
     <div className={claseTarjeta(esAdmin && hayModificacionPendiente)}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h4 className="font-semibold text-slate-800 dark:text-slate-100">{titulo}</h4>
-        {tipo !== "idoneidad" && !esAdmin && (
+        {tipo !== "idoneidad" && !esAdmin && !esObservador && (
           <Badge estado={miEstado} estadoAdmin={miEstadoAdmin} textoActualizado={textoActualizado} />
         )}
       </div>
@@ -208,14 +211,14 @@ export default function ComponenteBlock({
         </div>
       )}
 
-      {!esAdmin && miSugerenciaFueRechazada && miRevision.comentarioAdmin && (
+      {!esAdmin && !esObservador && miSugerenciaFueRechazada && miRevision.comentarioAdmin && (
         <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
           <strong>El {ROL_ADMIN_NOMBRE} no aprobó esta sugerencia:</strong> {miRevision.comentarioAdmin}
         </p>
       )}
 
       <div className="mt-auto pt-3">
-        {esAdmin ? null : tipo === "idoneidad" ? null : !editandoSugerencia ? (
+        {esAdmin || esObservador ? null : tipo === "idoneidad" ? null : !editandoSugerencia ? (
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-approve" onClick={() => onAprobar(revisorActivo)}>
               ✓ Aprobar

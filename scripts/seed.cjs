@@ -1,6 +1,6 @@
 /**
  * Carga inicial de datos en Firebase: crea los usuarios (directores de
- * programa, departamentos, decano y admin) en Authentication, los catálogos
+ * programa, departamentos, decano, viceacademico y admin) en Authentication, los catálogos
  * de programas y departamentos, y las asignaturas con todos sus componentes
  * (pregrado, posgradual, experiencia, competencias 1..N e idoneidad),
  * leyendo data/tabla_resultado.xlsx. Cada componente lleva una revisión en
@@ -98,6 +98,15 @@ async function crearOActualizarUsuario(c) {
       departamentoId: null,
       nombreDepartamento: null,
       nombre: "Decano de la Facultad de Educación",
+    };
+  } else if (rol === "viceacademico") {
+    datos = {
+      rol,
+      programaId: null,
+      nombrePrograma: null,
+      departamentoId: null,
+      nombreDepartamento: null,
+      nombre: "Vicerrectoría Académica",
     };
   } else {
     // admin

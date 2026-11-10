@@ -22,6 +22,7 @@ export default function App() {
 
   if (perfil.rol === "admin") return <AdminDashboard />;
   if (perfil.rol === "decano") return <DecanoDashboard />;
+  if (perfil.rol === "viceacademico") return <DecanoDashboard soloLectura />;
   if (perfil.rol === "departamento") return <DepartamentoDashboard />;
   if (perfil.rol === "director") return <DirectorDashboard />;
 
