@@ -7,7 +7,12 @@ import {
   suscribirProgramas,
   suscribirTodasLasAsignaturas,
 } from "../services/asignaturas.js";
-import { ESTADO_REVISOR, listarComponentes } from "../utils/constantes.js";
+import {
+  ESTADO_ADMIN,
+  ESTADO_REVISOR,
+  listarComponentes,
+  revisoresDeAsignatura,
+} from "../utils/constantes.js";
 import { exportarPdfDirector } from "../utils/exportPdf.js";
 
 const CAMPO =
@@ -19,6 +24,30 @@ function pendientesDelDecano(asignatura) {
     const rev = asignatura.componentes?.[c.clave]?.revisiones?.decano;
     return (rev?.estado || ESTADO_REVISOR.PENDIENTE) === ESTADO_REVISOR.PENDIENTE;
   }).length;
+}
+
+/**
+ * Para el observador (soloLectura): sugerencias de MODIFICAR de cualquier
+ * revisor (director, departamento o decano) que el Director de Departamento
+ * todavía no resolvió — así puede ubicar rápido dónde hay algo pendiente,
+ * igual que ve el propio Director de Departamento en su panel.
+ */
+function pendientesPorResolver(asignatura) {
+  const revisores = revisoresDeAsignatura(asignatura);
+  let total = 0;
+  for (const { clave } of listarComponentes(asignatura.componentes)) {
+    const revisiones = asignatura.componentes?.[clave]?.revisiones || {};
+    for (const revisor of revisores) {
+      const rev = revisiones[revisor];
+      if (
+        rev?.estado === ESTADO_REVISOR.MODIFICAR &&
+        (rev.estadoAdmin || ESTADO_ADMIN.PENDIENTE) === ESTADO_ADMIN.PENDIENTE
+      ) {
+        total++;
+      }
+    }
+  }
+  return total;
 }
 
 /**
@@ -79,7 +108,10 @@ export default function DecanoDashboard({ soloLectura = false }) {
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     return asignaturas
-      .map((a) => ({ asignatura: a, pendientes: soloLectura ? 0 : pendientesDelDecano(a) }))
+      .map((a) => ({
+        asignatura: a,
+        pendientes: soloLectura ? pendientesPorResolver(a) : pendientesDelDecano(a),
+      }))
       .filter(
         ({ asignatura: a, pendientes }) =>
           (!programaFiltro || a.programaId === programaFiltro) &&
@@ -183,17 +215,15 @@ export default function DecanoDashboard({ soloLectura = false }) {
                 placeholder="Buscar asignatura…"
                 className={CAMPO}
               />
-              {!soloLectura && (
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={soloPendientes}
-                    onChange={(e) => setSoloPendientes(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
-                  Solo con componentes por revisar
-                </label>
-              )}
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={soloPendientes}
+                  onChange={(e) => setSoloPendientes(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                {soloLectura ? "Solo con modificaciones por resolver" : "Solo con componentes por revisar"}
+              </label>
             </div>
 
             <div className="flex-1 overflow-y-auto">
