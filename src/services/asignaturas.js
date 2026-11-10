@@ -6,6 +6,7 @@ import {
   onSnapshot,
   doc,
   getDoc,
+  setDoc,
   updateDoc,
   arrayUnion,
   serverTimestamp,
@@ -15,7 +16,7 @@ function porOrden(a, b) {
   return (a.orden ?? 0) - (b.orden ?? 0);
 }
 import { db } from "../firebase.js";
-import { ESTADO_ADMIN, ESTADO_REVISOR } from "../utils/constantes.js";
+import { ESTADO_ADMIN, ESTADO_REVISOR, listarComponentes } from "../utils/constantes.js";
 
 /** Suscribe en tiempo real a la lista de programas (para el selector del admin/decano). */
 export function suscribirProgramas(cb) {
@@ -140,6 +141,37 @@ export async function enviarSugerencia(asignaturaId, clave, revisor, comentario)
 }
 
 /**
+ * Refleja el texto final de UN componente en perfilesPublicos/{asignaturaId}
+ * (sin comentarios de revisión ni estados internos), para que el micrositio
+ * externo lo lea directamente en vez de que alguien suba a mano el PDF. Si
+ * falla (p. ej. mientras las reglas de Firestore aún no se republicaron),
+ * no debe romper el guardado principal del texto.
+ */
+async function espejarComponentePublico(asignaturaId, data, componentesCompletos, clave, texto) {
+  try {
+    const meta =
+      listarComponentes({ ...componentesCompletos, [clave]: { ...componentesCompletos[clave], valor: texto } }).find(
+        (c) => c.clave === clave
+      ) || {};
+    await setDoc(
+      doc(db, "perfilesPublicos", asignaturaId),
+      {
+        nombre: data.nombre,
+        orden: data.orden ?? 0,
+        programaId: data.programaId,
+        nombrePrograma: data.nombrePrograma,
+        departamentoId: data.departamentoId || null,
+        nombreDepartamento: data.nombreDepartamento || null,
+        componentes: { [clave]: { etiqueta: meta.etiqueta || clave, tipo: meta.tipo || "fijo", valor: texto } },
+      },
+      { merge: true }
+    );
+  } catch (e) {
+    console.error("No se pudo actualizar perfilesPublicos (no afecta el guardado principal):", e);
+  }
+}
+
+/**
  * El Director de Departamento edita el texto de cualquier componente.
  * Para cada revisor (director/departamento/decano) que ya lo había aprobado,
  * o cuya sugerencia fue aprobada y aplicada, esa revisión vuelve a quedar
@@ -147,30 +179,32 @@ export async function enviarSugerencia(asignaturaId, clave, revisor, comentario)
  */
 export async function editarTextoComponente(asignaturaId, clave, texto) {
   const ref = doc(db, "asignaturas", asignaturaId);
-  const actual = await leerComponente(ref, clave);
+  const snap = await getDoc(ref);
+  const data = snap.data() || {};
+  const componentesCompletos = data.componentes || {};
+  const actual = componentesCompletos[clave] || {};
   if ((actual.valor ?? "") === texto) return;
 
   const campos = {
     [`componentes.${clave}.valor`]: texto,
     [`componentes.${clave}.fechaEdicion`]: serverTimestamp(),
   };
-  if (clave === "idoneidad") {
-    await updateDoc(ref, campos);
-    return;
-  }
-  for (const [revisor, rev] of Object.entries(actual.revisiones || {})) {
-    const sugerenciaAplicada = rev.estado === ESTADO_REVISOR.MODIFICAR && rev.estadoAdmin === ESTADO_ADMIN.APROBADO;
-    const eraAprobado = rev.estado === ESTADO_REVISOR.APROBADO;
-    if (sugerenciaAplicada || eraAprobado) {
-      Object.assign(
-        campos,
-        sugerenciaAplicada ? archivarCiclo(clave, revisor, rev) : {},
-        reiniciarRevision(clave, revisor)
-      );
+  if (clave !== "idoneidad") {
+    for (const [revisor, rev] of Object.entries(actual.revisiones || {})) {
+      const sugerenciaAplicada = rev.estado === ESTADO_REVISOR.MODIFICAR && rev.estadoAdmin === ESTADO_ADMIN.APROBADO;
+      const eraAprobado = rev.estado === ESTADO_REVISOR.APROBADO;
+      if (sugerenciaAplicada || eraAprobado) {
+        Object.assign(
+          campos,
+          sugerenciaAplicada ? archivarCiclo(clave, revisor, rev) : {},
+          reiniciarRevision(clave, revisor)
+        );
+      }
     }
+    campos[`componentes.${clave}.textoActualizado`] = true;
   }
-  campos[`componentes.${clave}.textoActualizado`] = true;
   await updateDoc(ref, campos);
+  await espejarComponentePublico(asignaturaId, data, componentesCompletos, clave, texto);
 }
 
 /** El Director de Departamento aprueba la modificación solicitada por un revisor. */

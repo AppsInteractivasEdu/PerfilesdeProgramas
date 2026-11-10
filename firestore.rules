@@ -97,5 +97,19 @@ service cloud.firestore {
 
       allow create, delete: if false; // la carga inicial se hace con el script de administrador
     }
+
+    // perfilesPublicos: espejo de SOLO el texto final de cada asignatura
+    // (sin comentarios de revisión ni estados internos), de lectura pública
+    // y sin autenticación. Lo usa el micrositio externo para armar sus
+    // propios filtros, en vez de que alguien suba a mano el PDF que antes
+    // se descargaba desde este aplicativo. El Director de Departamento
+    // (admin) es el único que puede escribir aquí, y solo lo hace desde
+    // editarTextoComponente (src/services/asignaturas.js) o desde el
+    // script de respaldo inicial (scripts/exportar_perfiles_publicos.cjs,
+    // que usa el SDK de administrador y no pasa por estas reglas).
+    match /perfilesPublicos/{asignaturaId} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
   }
 }
