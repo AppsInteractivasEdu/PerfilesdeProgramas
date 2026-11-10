@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar.jsx";
 import ContenidoAsignatura from "../components/ContenidoAsignatura.jsx";
+import AvanceOferta from "../components/AvanceOferta.jsx";
 import {
   suscribirDepartamentos,
   suscribirProgramas,
@@ -41,6 +42,7 @@ function resumenSolicitudes(asignatura) {
 }
 
 export default function AdminDashboard() {
+  const [vista, setVista] = useState("perfiles");
   const [programas, setProgramas] = useState([]);
   const [departamentos, setDepartamentos] = useState([]);
   const [asignaturas, setAsignaturas] = useState([]);
@@ -216,6 +218,33 @@ export default function AdminDashboard() {
       />
 
       <main className="mx-auto w-full max-w-[2400px] space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+        <div role="tablist" aria-label="Secciones del panel" className="flex flex-wrap gap-2">
+          {[
+            ["perfiles", "Revisión de perfiles docentes"],
+            ["oferta", "Avance de la oferta 2027-I"],
+          ].map(([id, titulo]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={vista === id}
+              onClick={() => setVista(id)}
+              className={
+                "rounded-xl px-5 py-3 text-sm font-bold transition-colors sm:text-base " +
+                (vista === id
+                  ? "bg-institucional-navy text-white shadow dark:bg-institucional-gold dark:text-institucional-navyDark"
+                  : "bg-white text-slate-700 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700")
+              }
+            >
+              {titulo}
+            </button>
+          ))}
+        </div>
+
+        {vista === "oferta" ? (
+          <AvanceOferta directorPorPrograma={directorPorPrograma} />
+        ) : (
+          <>
         <div className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold text-slate-800 dark:text-slate-100">Consolidado por programa</h2>
@@ -410,6 +439,8 @@ export default function AdminDashboard() {
             )}
           </section>
         </div>
+          </>
+        )}
       </main>
     </div>
   );

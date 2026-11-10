@@ -111,5 +111,22 @@ service cloud.firestore {
       allow read: if true;
       allow write: if esAdmin();
     }
+
+    // ofertas2027I: asignaturas sobre las que cada director de programa define cuántos grupos se
+    // ofertarán en 2027-I (grupos: null = sin definir, 0 = SIN OFERTAR, 1..10). Cada director solo
+    // puede ver y modificar las filas de SU programa; el Director de Departamento (admin) ve todas
+    // (también lo usa el aplicativo de Asignación Docente, iniciando sesión con esa cuenta). Las filas
+    // las crea el script scripts/seed_oferta.cjs (SDK de administrador); desde el navegador solo se
+    // puede cambiar `grupos` (y quién/cuándo).
+    match /ofertas2027I/{ofertaId} {
+      allow read: if esAdmin() || esDirectorDelPrograma(resource.data.programaId);
+      allow update: if (esAdmin() || esDirectorDelPrograma(resource.data.programaId))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['grupos', 'actualizadoPor', 'actualizadoEn'])
+        && (request.resource.data.grupos == null
+            || (request.resource.data.grupos is int
+                && request.resource.data.grupos >= 0
+                && request.resource.data.grupos <= 10));
+      allow create, delete: if false;
+    }
   }
 }

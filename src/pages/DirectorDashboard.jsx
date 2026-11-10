@@ -2,12 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import AsignaturaCard from "../components/AsignaturaCard.jsx";
+import OfertaPrograma from "../components/OfertaPrograma.jsx";
 import { suscribirAsignaturasPorPrograma } from "../services/asignaturas.js";
 import { ESTADO_REVISOR, listarComponentes } from "../utils/constantes.js";
 import { exportarPdfDirector } from "../utils/exportPdf.js";
 
+const PESTANAS = [
+  { id: "oferta", titulo: "Oferta de grupos 2027-I" },
+  { id: "perfiles", titulo: "Revisión de perfiles docentes" },
+];
+
 export default function DirectorDashboard() {
   const { perfil } = useAuth();
+  const [vista, setVista] = useState("oferta");
   const [asignaturas, setAsignaturas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
@@ -57,6 +64,30 @@ export default function DirectorDashboard() {
       <Navbar titulo={perfil?.nombrePrograma} subtitulo="Panel del director de programa" />
 
       <main className="mx-auto w-full max-w-[2400px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div role="tablist" aria-label="Secciones del panel" className="flex flex-wrap gap-2">
+          {PESTANAS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              role="tab"
+              aria-selected={vista === p.id}
+              onClick={() => setVista(p.id)}
+              className={
+                "rounded-xl px-5 py-3 text-sm font-bold transition-colors sm:text-base " +
+                (vista === p.id
+                  ? "bg-institucional-navy text-white shadow dark:bg-institucional-gold dark:text-institucional-navyDark"
+                  : "bg-white text-slate-700 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700")
+              }
+            >
+              {p.titulo}
+            </button>
+          ))}
+        </div>
+
+        {vista === "oferta" ? (
+          <OfertaPrograma />
+        ) : (
+          <>
         <div className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold text-slate-800 dark:text-slate-100">
@@ -98,6 +129,8 @@ export default function DirectorDashboard() {
               <AsignaturaCard key={a.id} asignatura={a} revisor="director" />
             ))}
           </div>
+        )}
+          </>
         )}
       </main>
     </div>
