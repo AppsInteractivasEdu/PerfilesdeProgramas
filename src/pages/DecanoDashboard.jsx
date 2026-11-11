@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import ContenidoAsignatura from "../components/ContenidoAsignatura.jsx";
+import AvanceOferta from "../components/AvanceOferta.jsx";
 import {
   suscribirDepartamentos,
   suscribirProgramas,
@@ -64,6 +65,7 @@ function pendientesPorResolver(asignatura) {
  */
 export default function DecanoDashboard({ soloLectura = false }) {
   const { perfil } = useAuth();
+  const [vista, setVista] = useState("perfiles");
   const [programas, setProgramas] = useState([]);
   const [departamentos, setDepartamentos] = useState([]);
   const [asignaturas, setAsignaturas] = useState([]);
@@ -155,6 +157,30 @@ export default function DecanoDashboard({ soloLectura = false }) {
       />
 
       <main className="mx-auto w-full max-w-[2400px] space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+        {soloLectura && (
+          <div className="flex gap-2">
+            {[
+              { id: "perfiles", label: "Revisión de perfiles docentes" },
+              { id: "oferta", label: "Avance de la oferta 2027-I" },
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setVista(id)}
+                className={
+                  vista === id
+                    ? "rounded-lg bg-institucional-navy px-4 py-2 text-sm font-semibold text-white shadow-sm dark:bg-institucional-gold dark:text-slate-900"
+                    : "rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {soloLectura && vista === "oferta" && <AvanceOferta />}
+        {!(soloLectura && vista === "oferta") && (<>
         <div className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold text-slate-800 dark:text-slate-100">
@@ -295,6 +321,7 @@ export default function DecanoDashboard({ soloLectura = false }) {
             )}
           </section>
         </div>
+        </>)}
       </main>
     </div>
   );
