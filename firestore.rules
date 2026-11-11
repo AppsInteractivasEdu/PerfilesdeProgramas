@@ -128,7 +128,7 @@ service cloud.firestore {
     // crea el script scripts/seed_oferta.cjs (SDK de administrador); desde el navegador solo se
     // puede cambiar `grupos` (y quién/cuándo), y únicamente el admin y los directores.
     match /ofertas2027I/{ofertaId} {
-      allow read: if esAdmin() || esViceacademico() || esDirectorDelPrograma(resource.data.programaId);
+      allow read: if esAdmin() || esDecano() || esViceacademico() || esDirectorDelPrograma(resource.data.programaId);
       allow update: if (esAdmin() || esDirectorDelPrograma(resource.data.programaId))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['grupos', 'actualizadoPor', 'actualizadoEn'])
         && (request.resource.data.grupos == null

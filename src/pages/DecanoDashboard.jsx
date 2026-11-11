@@ -157,8 +157,7 @@ export default function DecanoDashboard({ soloLectura = false }) {
       />
 
       <main className="mx-auto w-full max-w-[2400px] space-y-4 px-4 py-6 sm:px-6 lg:px-8">
-        {soloLectura && (
-          <div className="flex gap-2">
+        <div className="flex gap-2">
             {[
               { id: "perfiles", label: "Revisión de perfiles docentes" },
               { id: "oferta", label: "Avance de la oferta 2027-I" },
@@ -177,10 +176,9 @@ export default function DecanoDashboard({ soloLectura = false }) {
               </button>
             ))}
           </div>
-        )}
 
-        {soloLectura && vista === "oferta" && <AvanceOferta />}
-        {!(soloLectura && vista === "oferta") && (<>
+        {vista === "oferta" && <AvanceOferta />}
+        {vista !== "oferta" && (<>
         <div className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold text-slate-800 dark:text-slate-100">
