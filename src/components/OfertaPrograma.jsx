@@ -113,7 +113,7 @@ export default function OfertaPrograma() {
     exportarPdfOfertaPrograma(nombrePrograma, filas, `Oferta_2027-I_${slugPrograma}.pdf`);
   };
   const descargarExcel = () => {
-    exportarExcelOfertaPrograma(nombrePrograma, filas, `Oferta_2027-I_${slugPrograma}.xlsx`);
+    exportarExcelOfertaPrograma(nombrePrograma, filas, `Oferta_2027-I_${slugPrograma}.xlsx`).catch(console.error);
   };
 
   const guardar = async () => {

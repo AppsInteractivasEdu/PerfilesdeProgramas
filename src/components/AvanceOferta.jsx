@@ -17,17 +17,17 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
   const [error, setError] = useState("");
   const [abierto, setAbierto] = useState(null);
 
-  const descargarTodoPdf = () => {
+  const descargarTodoPdf = async () => {
     const programasData = [...new Map(filas.map((f) => [f.programaId, f.nombrePrograma])).entries()]
       .sort((a, b) => a[1].localeCompare(b[1], "es"))
       .map(([id, nombre]) => ({ nombre, filas: filas.filter((f) => f.programaId === id) }));
     exportarPdfOfertaCompleta(programasData, "Oferta_2027-I_todos_los_programas.pdf");
   };
-  const descargarTodoExcel = () => {
+  const descargarTodoExcel = async () => {
     const programasData = [...new Map(filas.map((f) => [f.programaId, f.nombrePrograma])).entries()]
       .sort((a, b) => a[1].localeCompare(b[1], "es"))
       .map(([id, nombre]) => ({ nombre, filas: filas.filter((f) => f.programaId === id) }));
-    exportarExcelOfertaCompleta(programasData, "Oferta_2027-I_todos_los_programas.xlsx");
+    await exportarExcelOfertaCompleta(programasData, "Oferta_2027-I_todos_los_programas.xlsx");
   };
 
   useEffect(
@@ -148,7 +148,7 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
                     abierto={abiertoAqui} alternar={() => setAbierto(abiertoAqui ? null : p.programaId)}
                     sesion={directorPorPrograma.get(p.programaId)?.ultimaConexion}
                     onPdf={() => exportarPdfOfertaPrograma(p.nombre, p.filas, `Oferta_2027-I_${slugP}.pdf`)}
-                    onExcel={() => exportarExcelOfertaPrograma(p.nombre, p.filas, `Oferta_2027-I_${slugP}.xlsx`)} />
+                    onExcel={() => exportarExcelOfertaPrograma(p.nombre, p.filas, `Oferta_2027-I_${slugP}.xlsx`).catch(console.error)} />
                 );
               })}
             </tbody>
