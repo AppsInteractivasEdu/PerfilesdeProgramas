@@ -94,11 +94,15 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
               {totales.definidas} de {totales.total} asignaturas definidas
             </span>
             <span className="badge bg-emerald-600 text-white">{totales.grupos} grupos ofertados</span>
-            <div className="ml-auto flex gap-2">
-              <button type="button" className="btn-secondary py-1 text-xs" onClick={descargarTodoPdf}>
+            <div className="ml-auto flex gap-3">
+              <button type="button"
+                className="rounded-lg bg-institucional-navy px-5 py-2 text-sm font-semibold text-white shadow hover:bg-blue-900 dark:bg-blue-700 dark:hover:bg-blue-600"
+                onClick={descargarTodoPdf}>
                 ⬇ PDF completo
               </button>
-              <button type="button" className="btn-secondary py-1 text-xs" onClick={descargarTodoExcel}>
+              <button type="button"
+                className="rounded-lg bg-institucional-navy px-5 py-2 text-sm font-semibold text-white shadow hover:bg-blue-900 dark:bg-blue-700 dark:hover:bg-blue-600"
+                onClick={descargarTodoExcel}>
                 ⬇ Excel completo
               </button>
             </div>
@@ -120,16 +124,16 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-sm">
-            <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+            <thead className="bg-slate-300 text-xs font-bold uppercase tracking-wide text-slate-800 dark:bg-slate-600 dark:text-slate-100">
               <tr>
-                <th className="px-4 py-3">Programa</th>
-                <th className="w-56 px-3 py-3">Avance</th>
-                <th className="px-3 py-3 text-center">Con oferta</th>
-                <th className="px-3 py-3 text-center">Grupos</th>
-                <th className="px-3 py-3 text-center">Sin ofertar</th>
-                <th className="px-3 py-3 text-center">Por definir</th>
-                <th className="px-3 py-3">Última actualización</th>
-                <th className="px-3 py-3">Última sesión del director</th>
+                <th className="px-4 py-3.5">Programa</th>
+                <th className="w-56 px-3 py-3.5">Avance</th>
+                <th className="px-3 py-3.5 text-center">Con oferta</th>
+                <th className="px-3 py-3.5 text-center">Grupos</th>
+                <th className="px-3 py-3.5 text-center">Sin ofertar</th>
+                <th className="px-3 py-3.5 text-center">Por definir</th>
+                <th className="px-3 py-3.5">Última actualización</th>
+                <th className="px-3 py-3.5">Última sesión del director</th>
               </tr>
             </thead>
             <tbody>
@@ -158,27 +162,27 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
 function FilaPrograma({ p, pct, completo, iniciado, abierto, alternar, sesion, onPdf, onExcel }) {
   return (
     <>
-      <tr className="cursor-pointer border-t border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700/40" onClick={alternar}>
-        <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
+      <tr className="cursor-pointer border-t border-slate-300 bg-slate-50 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800/60 dark:hover:bg-slate-700/60" onClick={alternar}>
+        <td className="px-4 py-3.5 font-bold text-slate-900 dark:text-slate-100 text-base">
           <span className="mr-2 text-slate-400">{abierto ? "▾" : "▸"}</span>
           {p.nombre.replace("Licenciatura en ", "Lic. ")}
           <span className={"ml-2 " + (completo ? "badge-approved" : iniciado ? "badge-modify" : "badge-pending")}>
             {completo ? "Completo" : iniciado ? "En curso" : "Sin iniciar"}
           </span>
         </td>
-        <td className="px-3 py-3">
+        <td className="px-3 py-3.5">
           <div className="flex items-center gap-2">
-            <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+            <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-300 dark:bg-slate-600">
               <div className={"h-full " + (completo ? "bg-emerald-600" : "bg-orange-500")} style={{ width: pct + "%" }} />
             </div>
             <span className="w-24 shrink-0 text-xs font-semibold">{p.definidas} de {p.total} ({pct}%)</span>
           </div>
         </td>
-        <td className="px-3 py-3 text-center">{p.ofertadas}</td>
-        <td className="px-3 py-3 text-center font-bold">{p.grupos}</td>
-        <td className="px-3 py-3 text-center">{p.sinOfertar}</td>
-        <td className="px-3 py-3 text-center">{p.pendientes ? <span className="badge-modify">{p.pendientes}</span> : 0}</td>
-        <td className="px-3 py-3 text-xs">
+        <td className="px-3 py-3.5 text-center text-sm">{p.ofertadas}</td>
+        <td className="px-3 py-3.5 text-center text-sm font-bold">{p.grupos}</td>
+        <td className="px-3 py-3.5 text-center text-sm">{p.sinOfertar}</td>
+        <td className="px-3 py-3.5 text-center text-sm">{p.pendientes ? <span className="badge-modify">{p.pendientes}</span> : 0}</td>
+        <td className="px-3 py-3.5 text-xs">
           {p.ultima ? (
             <>
               {new Date(p.ultima).toLocaleString("es-CO")}
@@ -188,16 +192,16 @@ function FilaPrograma({ p, pct, completo, iniciado, abierto, alternar, sesion, o
             <span className="text-slate-500 dark:text-slate-400">—</span>
           )}
         </td>
-        <td className="px-3 py-3 text-xs">{sesion !== undefined ? formatearUltimaConexion(sesion) : "—"}</td>
+        <td className="px-3 py-3.5 text-xs">{sesion !== undefined ? formatearUltimaConexion(sesion) : "—"}</td>
       </tr>
       {abierto && (
         <tr className="border-t border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40">
           <td colSpan={8} className="px-4 py-4">
             <div className="mb-4 flex justify-end gap-3">
-              <button type="button" className="btn-secondary px-5 py-2 text-sm font-semibold" onClick={onPdf}>
+              <button type="button" className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700" onClick={onPdf}>
                 ⬇ PDF de este programa
               </button>
-              <button type="button" className="btn-secondary px-5 py-2 text-sm font-semibold" onClick={onExcel}>
+              <button type="button" className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700" onClick={onExcel}>
                 ⬇ Excel de este programa
               </button>
             </div>
