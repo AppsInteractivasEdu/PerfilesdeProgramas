@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { suscribirOfertaTodas } from "../services/oferta.js";
 import { formatearUltimaConexion } from "../utils/tiempo.js";
+import { exportarExcelOfertaPrograma, exportarExcelOfertaCompleta } from "../utils/exportExcel.js";
+import { exportarPdfOfertaPrograma, exportarPdfOfertaCompleta } from "../utils/exportPdf.js";
 
 const aMs = (t) => (t?.toMillis ? t.toMillis() : typeof t === "number" ? t : t ? Date.parse(t) || 0 : 0);
 
@@ -14,6 +16,19 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [abierto, setAbierto] = useState(null);
+
+  const descargarTodoPdf = () => {
+    const programasData = [...new Map(filas.map((f) => [f.programaId, f.nombrePrograma])).entries()]
+      .sort((a, b) => a[1].localeCompare(b[1], "es"))
+      .map(([id, nombre]) => ({ nombre, filas: filas.filter((f) => f.programaId === id) }));
+    exportarPdfOfertaCompleta(programasData, "Oferta_2027-I_todos_los_programas.pdf");
+  };
+  const descargarTodoExcel = () => {
+    const programasData = [...new Map(filas.map((f) => [f.programaId, f.nombrePrograma])).entries()]
+      .sort((a, b) => a[1].localeCompare(b[1], "es"))
+      .map(([id, nombre]) => ({ nombre, filas: filas.filter((f) => f.programaId === id) }));
+    exportarExcelOfertaCompleta(programasData, "Oferta_2027-I_todos_los_programas.xlsx");
+  };
 
   useEffect(
     () =>
@@ -71,7 +86,7 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
           ofertar o SIN OFERTAR). Lo que está «por definir» aún no aparece en Asignación Docente.
         </p>
         {!cargando && !error && programas.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
             <span className="badge bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100">
               {totales.completos} de {programas.length} programas completos
             </span>
@@ -79,6 +94,14 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
               {totales.definidas} de {totales.total} asignaturas definidas
             </span>
             <span className="badge bg-emerald-600 text-white">{totales.grupos} grupos ofertados</span>
+            <div className="ml-auto flex gap-2">
+              <button type="button" className="btn-secondary py-1 text-xs" onClick={descargarTodoPdf}>
+                ⬇ PDF completo
+              </button>
+              <button type="button" className="btn-secondary py-1 text-xs" onClick={descargarTodoExcel}>
+                ⬇ Excel completo
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -115,10 +138,13 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
                 const completo = p.pendientes === 0;
                 const iniciado = p.definidas > 0;
                 const abiertoAqui = abierto === p.programaId;
+                const slugP = p.nombre.replace(/[^a-z0-9]/gi, "_").toLowerCase();
                 return (
                   <FilaPrograma key={p.programaId} p={p} pct={pct} completo={completo} iniciado={iniciado}
                     abierto={abiertoAqui} alternar={() => setAbierto(abiertoAqui ? null : p.programaId)}
-                    sesion={directorPorPrograma.get(p.programaId)?.ultimaConexion} />
+                    sesion={directorPorPrograma.get(p.programaId)?.ultimaConexion}
+                    onPdf={() => exportarPdfOfertaPrograma(p.nombre, p.filas, `Oferta_2027-I_${slugP}.pdf`)}
+                    onExcel={() => exportarExcelOfertaPrograma(p.nombre, p.filas, `Oferta_2027-I_${slugP}.xlsx`)} />
                 );
               })}
             </tbody>
@@ -129,7 +155,7 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
   );
 }
 
-function FilaPrograma({ p, pct, completo, iniciado, abierto, alternar, sesion }) {
+function FilaPrograma({ p, pct, completo, iniciado, abierto, alternar, sesion, onPdf, onExcel }) {
   return (
     <>
       <tr className="cursor-pointer border-t border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700/40" onClick={alternar}>
@@ -167,6 +193,14 @@ function FilaPrograma({ p, pct, completo, iniciado, abierto, alternar, sesion })
       {abierto && (
         <tr className="border-t border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40">
           <td colSpan={8} className="px-4 py-4">
+            <div className="mb-3 flex gap-2">
+              <button type="button" className="btn-secondary py-1 text-xs" onClick={onPdf}>
+                ⬇ PDF de este programa
+              </button>
+              <button type="button" className="btn-secondary py-1 text-xs" onClick={onExcel}>
+                ⬇ Excel de este programa
+              </button>
+            </div>
             <div className="grid gap-4 lg:grid-cols-2">
               {["Plan anterior", "Plan de transición"].map((plan) => {
                 const lista = p.filas.filter((f) => f.plan === plan);

@@ -24,7 +24,7 @@ const args = process.argv.slice(2);
 const SIMULAR = args.includes("--simular");
 const RUTA_EXCEL = path.resolve(
   args.find((a) => !a.startsWith("--")) ||
-    path.join(RAIZ, "..", "docentesAsignacion", "FORMATO_DE_NECESIDADES_2027-I_COMPONENTES_DPD.xlsx")
+    path.join(RAIZ, "..", "docentesAsignacion", "FORMATO DE NECESIDADES 2027-I COMPLETO.xlsx")
 );
 
 // Programa (como figura en el Excel, sin tildes ni mayúsculas) -> id del programa en este aplicativo

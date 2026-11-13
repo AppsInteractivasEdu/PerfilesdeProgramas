@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { MAX_GRUPOS, guardarOferta, suscribirOfertaPorPrograma } from "../services/oferta.js";
+import { exportarExcelOfertaPrograma } from "../utils/exportExcel.js";
+import { exportarPdfOfertaPrograma } from "../utils/exportPdf.js";
 
 const CAMPO =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-institucional-navy focus:ring-2 focus:ring-institucional-navy/30 dark:border-slate-600 dark:bg-slate-800 dark:focus:border-institucional-gold dark:focus:ring-institucional-gold/30";
@@ -102,6 +104,16 @@ export default function OfertaPrograma() {
       else sig[f.id] = texto;
       return sig;
     });
+  };
+
+  const nombrePrograma = perfil?.nombrePrograma || perfil?.programaId || "programa";
+  const slugPrograma = nombrePrograma.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+
+  const descargarPdf = () => {
+    exportarPdfOfertaPrograma(nombrePrograma, filas, `Oferta_2027-I_${slugPrograma}.pdf`);
+  };
+  const descargarExcel = () => {
+    exportarExcelOfertaPrograma(nombrePrograma, filas, `Oferta_2027-I_${slugPrograma}.xlsx`);
   };
 
   const guardar = async () => {
@@ -262,7 +274,23 @@ export default function OfertaPrograma() {
                 </p>
               )}
             </div>
-            <div className="flex shrink-0 gap-2">
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn-secondary"
+                title="Descargar consolidado en PDF"
+                onClick={descargarPdf}
+              >
+                ⬇ PDF
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                title="Descargar consolidado en Excel"
+                onClick={descargarExcel}
+              >
+                ⬇ Excel
+              </button>
               <button
                 type="button"
                 className="btn-secondary"
