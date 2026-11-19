@@ -10,6 +10,13 @@ import {
 import { db } from "../firebase.js";
 
 export const MAX_GRUPOS = 10;
+export const MAX_ESTUDIANTES = 50;
+export const MAX_SUBGRUPOS = 5;
+
+/** Programa + componente para los que un grupo se puede repartir en subgrupos (Docente 1..5). */
+export function admiteSubgrupos(fila) {
+  return fila?.programaId === "quimica" && fila?.componente === "Saberes Específicos y Disciplinares";
+}
 
 /**
  * Suscribe en tiempo real a las asignaturas de la oferta 2027-I de un programa.
@@ -41,8 +48,9 @@ export function suscribirOfertaTodas(cb, onError) {
 }
 
 /**
- * Guarda de una vez los grupos que el director dejó definidos.
- * cambios: { [ofertaId]: null | 0..10 }  (null = sin definir, 0 = SIN OFERTAR)
+ * Guarda de una vez los cambios que el director dejó definidos.
+ * cambios: { [ofertaId]: { grupos?: null|0..10, estudiantes?: (null|0..50)[], subgrupos?: (null|{nombre,estudiantes}[])[] } }
+ * Solo se envían los campos presentes en cada entrada (actualización parcial).
  */
 export async function guardarOferta(cambios, correo) {
   const ids = Object.keys(cambios);
@@ -51,7 +59,7 @@ export async function guardarOferta(cambios, correo) {
     const lote = writeBatch(db);
     for (const id of ids.slice(i, i + TAM)) {
       lote.update(doc(db, "ofertas2027I", id), {
-        grupos: cambios[id],
+        ...cambios[id],
         actualizadoPor: correo || "",
         actualizadoEn: serverTimestamp(),
       });
