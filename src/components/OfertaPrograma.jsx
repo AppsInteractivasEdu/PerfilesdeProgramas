@@ -30,7 +30,7 @@ const OPCIONES = [
 ];
 
 const OPCIONES_SUBGRUPOS = [
-  { valor: "0", etiqueta: "Un solo docente" },
+  { valor: "0", etiqueta: "1 Docente" },
   ...Array.from({ length: MAX_SUBGRUPOS - 1 }, (_, i) => ({
     valor: String(i + 2),
     etiqueta: `${i + 2} Docentes`,
