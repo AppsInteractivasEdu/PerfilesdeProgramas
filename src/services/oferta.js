@@ -13,26 +13,20 @@ export const MAX_GRUPOS = 10;
 export const MAX_ESTUDIANTES = 50;
 export const MAX_SUBGRUPOS = 5;
 
-const sinTildes = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "");
-
 /**
- * Última Práctica Pedagógica Investigativa (VI o 6) o Práctica Profesional, de cualquier
- * programa: la práctica final, donde puede hacer falta más de un docente para un mismo grupo.
- * Las demás prácticas (I a V) no admiten subgrupos.
+ * Todas las asignaturas, de todos los programas, admiten repartir un grupo en subgrupos por
+ * docente (Docente 1..5): el director de cada programa decide, asignatura por asignatura y
+ * grupo por grupo, si hace falta o no. (Antes esto estaba limitado a Química y a las prácticas
+ * finales; ahora el director tiene el control completo sobre cualquier asignatura.)
+ *
+ * El efecto solo se refleja en el aplicativo de Asignación Docente para las asignaturas que ya
+ * pertenecen a alguno de sus tres componentes (Pedagógico, Didáctica de las Disciplinas, Práctica
+ * Pedagógica Investigativa): ese aplicativo solo asigna docentes dentro de esos componentes, así
+ * que un subgrupo definido aquí para una asignatura de otro componente (fundamentación,
+ * disciplinar específico, etc.) queda guardado pero no tiene efecto allá.
  */
-function esPracticaFinal(asignatura) {
-  const n = sinTildes(asignatura).toLowerCase().trim();
-  return /^practica profesional\b/.test(n) || /^practica pedagogica investigativa\s+(vi|6)\b/.test(n);
-}
-
-/**
- * Asignaturas para las que un grupo se puede repartir en subgrupos por docente (Docente 1..5):
- * en Licenciatura en Química, las de Saberes Específicos y Disciplinares; y, en cualquier
- * programa, la última Práctica Pedagógica Investigativa (VI) y «Práctica Profesional».
- */
-export function admiteSubgrupos(fila) {
-  if (fila?.programaId === "quimica" && fila?.componente === "Saberes Específicos y Disciplinares") return true;
-  return esPracticaFinal(fila?.asignatura);
+export function admiteSubgrupos() {
+  return true;
 }
 
 /**

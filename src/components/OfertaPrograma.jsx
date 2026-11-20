@@ -87,14 +87,15 @@ function listaDocentes(total, n, mismoDocente, compacto) {
 
 /**
  * Panel del director de programa para definir, por asignatura, cuántos grupos se ofertarán en
- * 2027-I, cuántos estudiantes tendrá cada grupo (0 a {MAX_ESTUDIANTES}) y, para las asignaturas que
- * lo admiten (ver admiteSubgrupos en services/oferta.js: Saberes Específicos y Disciplinares de
- * Química, y «Práctica Profesional» / «Práctica Pedagógica Investigativa VI» de cualquier programa),
- * en cuántos subgrupos por docente (Docente 1..5) se reparte cada grupo, y si esos subgrupos los
- * dicta el mismo docente o docentes distintos. Las asignaturas vienen del formato de necesidades,
+ * 2027-I, cuántos estudiantes tendrá cada grupo (0 a {MAX_ESTUDIANTES}) y, en cualquier asignatura
+ * de cualquier programa, en cuántos subgrupos por docente (Docente 1..5) se reparte cada grupo, si
+ * esos subgrupos los dicta el mismo docente o docentes distintos, y si los estudiantes se reparten
+ * entre ellos o el grupo se mantiene compacto. Las asignaturas vienen del formato de necesidades,
  * agrupadas por ACUERDO ACADÉMICO (plan anterior y plan de transición). Lo que se guarda lo toma en
  * tiempo real el aplicativo de Asignación Docente (pestaña «Asignación docente» → vista «Asignación
- * 2027-I»).
+ * 2027-I») — allí el efecto solo se ve en las asignaturas de sus tres componentes (Pedagógico,
+ * Didáctica de las Disciplinas, Práctica Pedagógica Investigativa), que es lo único que ese
+ * aplicativo asigna.
  */
 export default function OfertaPrograma() {
   const { perfil, usuarioFirebase } = useAuth();
@@ -284,11 +285,12 @@ export default function OfertaPrograma() {
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
           Para cada asignatura de tu programa elige cuántos grupos se ofertarán (de 1 a {MAX_GRUPOS}) o
           marca <b>SIN OFERTAR</b>, y para cada grupo cuántos estudiantes tendrá (de 0 a {MAX_ESTUDIANTES}).
-          {" "}En Saberes Específicos y Disciplinares de Química, y en «Práctica Profesional» / «Práctica
-          Pedagógica Investigativa VI» de cualquier programa, también puedes repartir cada grupo entre
-          varios docentes (Docente 1 a Docente {MAX_SUBGRUPOS}), indicar si será el mismo docente o
-          docentes distintos, y si los estudiantes se reparten entre ellos o el grupo se mantiene
-          compacto (todos dictan al mismo total de estudiantes). Al final de la página pulsa{" "}
+          {" "}En cualquier asignatura también puedes repartir cada grupo entre varios docentes (Docente 1 a
+          Docente {MAX_SUBGRUPOS}), indicar si será el mismo docente o docentes distintos, y si los
+          estudiantes se reparten entre ellos o el grupo se mantiene compacto (todos dictan al mismo total
+          de estudiantes) — el aplicativo de Asignación Docente solo refleja esto en las asignaturas de sus
+          tres componentes (Pedagógico, Didáctica de las Disciplinas, Práctica Pedagógica Investigativa).
+          Al final de la página pulsa{" "}
           <b>Guardar</b>; puedes volver a modificar y guardar cuantas veces lo necesites: el aplicativo de
           Asignación Docente se actualiza al instante. Las asignaturas «Sin ofertar» o «Sin definir» no
           aparecen allí.
