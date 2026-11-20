@@ -66,7 +66,8 @@ export function suscribirOfertaTodas(cb, onError) {
 
 /**
  * Guarda de una vez los cambios que el director dejó definidos.
- * cambios: { [ofertaId]: { grupos?: null|0..10, estudiantes?: (null|0..50)[], subgrupos?: (null|{nombre,estudiantes}[])[] } }
+ * cambios: { [ofertaId]: { grupos?: null|0..10, estudiantes?: (null|0..50)[],
+ *   subgrupos?: (null|{mismoDocente, compacto, lista:{nombre,estudiantes}[]})[] } }
  * Solo se envían los campos presentes en cada entrada (actualización parcial).
  */
 export async function guardarOferta(cambios, correo) {

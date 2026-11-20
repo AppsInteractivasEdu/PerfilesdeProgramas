@@ -30,7 +30,7 @@ const OPCIONES = [
 ];
 
 const OPCIONES_SUBGRUPOS = [
-  { valor: "0", etiqueta: "Sin Docentes" },
+  { valor: "0", etiqueta: "Un solo docente" },
   ...Array.from({ length: MAX_SUBGRUPOS - 1 }, (_, i) => ({
     valor: String(i + 2),
     etiqueta: `${i + 2} Docentes`,
@@ -40,6 +40,11 @@ const OPCIONES_SUBGRUPOS = [
 const OPCIONES_REPARTO = [
   { valor: "distintos", etiqueta: "Docentes distintos" },
   { valor: "mismo", etiqueta: "Mismo docente" },
+];
+
+const OPCIONES_COMPACTO = [
+  { valor: "repartido", etiqueta: "Estudiantes repartidos" },
+  { valor: "compacto", etiqueta: "Grupo compacto (mismos estudiantes)" },
 ];
 
 const aTexto = (grupos) => (grupos == null ? "" : String(grupos));
@@ -69,17 +74,15 @@ function claseFila(texto) {
 
 const nombreDocente = (idx, mismoDocente) => (mismoDocente ? "Docente 1" : `Docente ${idx + 1}`);
 
-function reparteParejo(total, n, mismoDocente) {
+/** Reparte `total` estudiantes entre `n` docentes (repartido) o les asigna a todos el grupo completo (compacto). */
+function listaDocentes(total, n, mismoDocente, compacto) {
   const t = total || 0;
+  if (compacto) {
+    return Array.from({ length: n }, (_, i) => ({ nombre: nombreDocente(i, mismoDocente), estudiantes: t }));
+  }
   const base = Math.floor(t / n);
   const resto = t - base * n;
-  return {
-    mismoDocente,
-    lista: Array.from({ length: n }, (_, i) => ({
-      nombre: nombreDocente(i, mismoDocente),
-      estudiantes: base + (i < resto ? 1 : 0),
-    })),
-  };
+  return Array.from({ length: n }, (_, i) => ({ nombre: nombreDocente(i, mismoDocente), estudiantes: base + (i < resto ? 1 : 0) }));
 }
 
 /**
@@ -184,15 +187,24 @@ export default function OfertaPrograma() {
   const cambiarEstudiantes = (f, idx, textoValor) => {
     const actual = efectivoDe(f, borrador);
     const estudiantes = actual.estudiantes.slice();
-    estudiantes[idx] = textoValor === "" ? null : Number(textoValor);
-    actualizarFila(f, { ...actual, estudiantes });
+    const nuevo = textoValor === "" ? null : Number(textoValor);
+    estudiantes[idx] = nuevo;
+    const subgrupos = actual.subgrupos.slice();
+    const cfg = subgrupos[idx];
+    // Si el grupo es compacto, todos los docentes dictan al mismo total: lo mantenemos sincronizado.
+    if (cfg && cfg.compacto) {
+      subgrupos[idx] = { ...cfg, lista: cfg.lista.map((sg) => ({ ...sg, estudiantes: nuevo })) };
+    }
+    actualizarFila(f, { ...actual, estudiantes, subgrupos });
   };
 
   const cambiarNumSubgrupos = (f, idx, n) => {
     const actual = efectivoDe(f, borrador);
     const subgrupos = actual.subgrupos.slice();
-    const mismoDocente = subgrupos[idx]?.mismoDocente || false;
-    subgrupos[idx] = n ? reparteParejo(actual.estudiantes[idx], n, mismoDocente) : null;
+    const previo = subgrupos[idx];
+    const mismoDocente = previo?.mismoDocente || false;
+    const compacto = previo?.compacto || false;
+    subgrupos[idx] = n ? { mismoDocente, compacto, lista: listaDocentes(actual.estudiantes[idx], n, mismoDocente, compacto) } : null;
     actualizarFila(f, { ...actual, subgrupos });
   };
 
@@ -201,7 +213,18 @@ export default function OfertaPrograma() {
     const subgrupos = actual.subgrupos.slice();
     const cfg = subgrupos[idx];
     if (!cfg) return;
-    subgrupos[idx] = { mismoDocente: mismo, lista: cfg.lista.map((sg, i) => ({ ...sg, nombre: nombreDocente(i, mismo) })) };
+    subgrupos[idx] = { ...cfg, mismoDocente: mismo, lista: cfg.lista.map((sg, i) => ({ ...sg, nombre: nombreDocente(i, mismo) })) };
+    actualizarFila(f, { ...actual, subgrupos });
+  };
+
+  /** Alterna entre repartir los estudiantes entre los docentes o dejar el grupo compacto (todos con el mismo total). */
+  const cambiarCompacto = (f, idx, compacto) => {
+    const actual = efectivoDe(f, borrador);
+    const subgrupos = actual.subgrupos.slice();
+    const cfg = subgrupos[idx];
+    if (!cfg) return;
+    const n = cfg.lista.length;
+    subgrupos[idx] = { ...cfg, compacto, lista: listaDocentes(actual.estudiantes[idx], n, cfg.mismoDocente, compacto) };
     actualizarFila(f, { ...actual, subgrupos });
   };
 
@@ -209,7 +232,7 @@ export default function OfertaPrograma() {
     const actual = efectivoDe(f, borrador);
     const subgrupos = actual.subgrupos.slice();
     const cfg = subgrupos[idxGrupo];
-    if (!cfg) return;
+    if (!cfg || cfg.compacto) return; // compacto: los totales no se editan individualmente
     const lista = cfg.lista.slice();
     lista[idxSub] = { ...lista[idxSub], estudiantes: textoValor === "" ? null : Number(textoValor) };
     subgrupos[idxGrupo] = { ...cfg, lista };
@@ -263,8 +286,9 @@ export default function OfertaPrograma() {
           marca <b>SIN OFERTAR</b>, y para cada grupo cuántos estudiantes tendrá (de 0 a {MAX_ESTUDIANTES}).
           {" "}En Saberes Específicos y Disciplinares de Química, y en «Práctica Profesional» / «Práctica
           Pedagógica Investigativa VI» de cualquier programa, también puedes repartir cada grupo entre
-          varios docentes (Docente 1 a Docente {MAX_SUBGRUPOS}), con cantidades de estudiantes distintas
-          entre sí, e indicar si será el mismo docente o docentes distintos. Al final de la página pulsa{" "}
+          varios docentes (Docente 1 a Docente {MAX_SUBGRUPOS}), indicar si será el mismo docente o
+          docentes distintos, y si los estudiantes se reparten entre ellos o el grupo se mantiene
+          compacto (todos dictan al mismo total de estudiantes). Al final de la página pulsa{" "}
           <b>Guardar</b>; puedes volver a modificar y guardar cuantas veces lo necesites: el aplicativo de
           Asignación Docente se actualiza al instante. Las asignaturas «Sin ofertar» o «Sin definir» no
           aparecen allí.
@@ -415,6 +439,22 @@ export default function OfertaPrograma() {
                                             ))}
                                           </select>
                                         )}
+
+                                        {conSubgrupos && lista.length > 0 && (
+                                          <select
+                                            aria-label={`¿Se reparten los estudiantes o el grupo ${i + 1} de ${f.asignatura} es compacto?`}
+                                            title="¿Los estudiantes se reparten entre los docentes, o el grupo se mantiene compacto (todos con el mismo total)?"
+                                            value={subGrupo.compacto ? "compacto" : "repartido"}
+                                            onChange={(e) => cambiarCompacto(f, i, e.target.value === "compacto")}
+                                            className={CAMPO_SM}
+                                          >
+                                            {OPCIONES_COMPACTO.map((o) => (
+                                              <option key={o.valor} value={o.valor}>
+                                                {o.etiqueta}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        )}
                                       </div>
 
                                       {conSubgrupos && lista.length > 0 && (
@@ -431,7 +471,8 @@ export default function OfertaPrograma() {
                                                 aria-label={`Estudiantes de ${sg.nombre}, grupo ${i + 1} de ${f.asignatura}`}
                                                 value={sg.estudiantes == null ? "" : String(sg.estudiantes)}
                                                 onChange={(e) => cambiarSubgrupoEstudiantes(f, i, si, e.target.value)}
-                                                className={CAMPO_DOCENTE}
+                                                disabled={subGrupo.compacto}
+                                                className={CAMPO_DOCENTE + (subGrupo.compacto ? " opacity-60" : "")}
                                               >
                                                 <option value="">—</option>
                                                 {Array.from({ length: MAX_ESTUDIANTES + 1 }, (_, k) => (
@@ -442,17 +483,23 @@ export default function OfertaPrograma() {
                                               </select>
                                             </label>
                                           ))}
-                                          <span
-                                            className={
-                                              "text-sm font-semibold " +
-                                              (estGrupo == null || sumaSub === estGrupo
-                                                ? "text-emerald-600 dark:text-emerald-400"
-                                                : "text-amber-600 dark:text-amber-400")
-                                            }
-                                            title="Suma de estudiantes de los subgrupos frente al total del grupo"
-                                          >
-                                            {sumaSub}/{estGrupo == null ? "?" : estGrupo}
-                                          </span>
+                                          {subGrupo.compacto ? (
+                                            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                                              Grupo compacto: todos con los mismos {estGrupo == null ? "?" : estGrupo} estudiantes
+                                            </span>
+                                          ) : (
+                                            <span
+                                              className={
+                                                "text-sm font-semibold " +
+                                                (estGrupo == null || sumaSub === estGrupo
+                                                  ? "text-emerald-600 dark:text-emerald-400"
+                                                  : "text-amber-600 dark:text-amber-400")
+                                              }
+                                              title="Suma de estudiantes de los subgrupos frente al total del grupo"
+                                            >
+                                              {sumaSub}/{estGrupo == null ? "?" : estGrupo}
+                                            </span>
+                                          )}
                                         </div>
                                       )}
                                     </div>
