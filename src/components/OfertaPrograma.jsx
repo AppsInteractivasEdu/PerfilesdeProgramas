@@ -15,7 +15,10 @@ const CAMPO =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-institucional-navy focus:ring-2 focus:ring-institucional-navy/30 dark:border-slate-600 dark:bg-slate-800 dark:focus:border-institucional-gold dark:focus:ring-institucional-gold/30";
 
 const CAMPO_SM =
-  "rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold outline-none focus:border-institucional-navy focus:ring-2 focus:ring-institucional-navy/20 dark:border-slate-600 dark:bg-slate-800 dark:focus:border-institucional-gold dark:focus:ring-institucional-gold/20";
+  "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold outline-none focus:border-institucional-navy focus:ring-2 focus:ring-institucional-navy/20 dark:border-slate-600 dark:bg-slate-800 dark:focus:border-institucional-gold dark:focus:ring-institucional-gold/20";
+
+const CAMPO_DOCENTE =
+  "rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-semibold outline-none focus:border-institucional-navy focus:ring-2 focus:ring-institucional-navy/20 dark:border-slate-600 dark:bg-slate-900 dark:focus:border-institucional-gold dark:focus:ring-institucional-gold/20";
 
 const OPCIONES = [
   { valor: "", etiqueta: "— Sin definir —" },
@@ -32,6 +35,11 @@ const OPCIONES_SUBGRUPOS = [
     valor: String(i + 2),
     etiqueta: `${i + 2} Docentes`,
   })),
+];
+
+const OPCIONES_REPARTO = [
+  { valor: "distintos", etiqueta: "Docentes distintos" },
+  { valor: "mismo", etiqueta: "Mismo docente" },
 ];
 
 const aTexto = (grupos) => (grupos == null ? "" : String(grupos));
@@ -59,21 +67,31 @@ function claseFila(texto) {
   return "bg-emerald-50/70 dark:bg-emerald-900/10";
 }
 
-function reparteParejo(total, n) {
+const nombreDocente = (idx, mismoDocente) => (mismoDocente ? "Docente 1" : `Docente ${idx + 1}`);
+
+function reparteParejo(total, n, mismoDocente) {
   const t = total || 0;
   const base = Math.floor(t / n);
   const resto = t - base * n;
-  return Array.from({ length: n }, (_, i) => ({ nombre: `Docente ${i + 1}`, estudiantes: base + (i < resto ? 1 : 0) }));
+  return {
+    mismoDocente,
+    lista: Array.from({ length: n }, (_, i) => ({
+      nombre: nombreDocente(i, mismoDocente),
+      estudiantes: base + (i < resto ? 1 : 0),
+    })),
+  };
 }
 
 /**
  * Panel del director de programa para definir, por asignatura, cuántos grupos se ofertarán en
- * 2027-I, cuántos estudiantes tendrá cada grupo (0 a {MAX_ESTUDIANTES}) y, para las asignaturas de
- * Saberes Específicos y Disciplinares y de Práctica Pedagógica Investigativa de Licenciatura en
- * Química (ver admiteSubgrupos en services/oferta.js), en cuántos subgrupos por docente (Docente
- * 1..5) se reparte cada grupo. Las asignaturas vienen del formato de necesidades, agrupadas
- * por ACUERDO ACADÉMICO (plan anterior y plan de transición). Lo que se guarda lo toma en tiempo real
- * el aplicativo de Asignación Docente (pestaña «Asignación docente» → vista «Asignación 2027-I»).
+ * 2027-I, cuántos estudiantes tendrá cada grupo (0 a {MAX_ESTUDIANTES}) y, para las asignaturas que
+ * lo admiten (ver admiteSubgrupos en services/oferta.js: Saberes Específicos y Disciplinares de
+ * Química, y «Práctica Profesional» / «Práctica Pedagógica Investigativa VI» de cualquier programa),
+ * en cuántos subgrupos por docente (Docente 1..5) se reparte cada grupo, y si esos subgrupos los
+ * dicta el mismo docente o docentes distintos. Las asignaturas vienen del formato de necesidades,
+ * agrupadas por ACUERDO ACADÉMICO (plan anterior y plan de transición). Lo que se guarda lo toma en
+ * tiempo real el aplicativo de Asignación Docente (pestaña «Asignación docente» → vista «Asignación
+ * 2027-I»).
  */
 export default function OfertaPrograma() {
   const { perfil, usuarioFirebase } = useAuth();
@@ -173,16 +191,28 @@ export default function OfertaPrograma() {
   const cambiarNumSubgrupos = (f, idx, n) => {
     const actual = efectivoDe(f, borrador);
     const subgrupos = actual.subgrupos.slice();
-    subgrupos[idx] = n ? reparteParejo(actual.estudiantes[idx], n) : null;
+    const mismoDocente = subgrupos[idx]?.mismoDocente || false;
+    subgrupos[idx] = n ? reparteParejo(actual.estudiantes[idx], n, mismoDocente) : null;
+    actualizarFila(f, { ...actual, subgrupos });
+  };
+
+  const cambiarReparto = (f, idx, mismo) => {
+    const actual = efectivoDe(f, borrador);
+    const subgrupos = actual.subgrupos.slice();
+    const cfg = subgrupos[idx];
+    if (!cfg) return;
+    subgrupos[idx] = { mismoDocente: mismo, lista: cfg.lista.map((sg, i) => ({ ...sg, nombre: nombreDocente(i, mismo) })) };
     actualizarFila(f, { ...actual, subgrupos });
   };
 
   const cambiarSubgrupoEstudiantes = (f, idxGrupo, idxSub, textoValor) => {
     const actual = efectivoDe(f, borrador);
     const subgrupos = actual.subgrupos.slice();
-    const lista = (subgrupos[idxGrupo] || []).slice();
+    const cfg = subgrupos[idxGrupo];
+    if (!cfg) return;
+    const lista = cfg.lista.slice();
     lista[idxSub] = { ...lista[idxSub], estudiantes: textoValor === "" ? null : Number(textoValor) };
-    subgrupos[idxGrupo] = lista;
+    subgrupos[idxGrupo] = { ...cfg, lista };
     actualizarFila(f, { ...actual, subgrupos });
   };
 
@@ -231,12 +261,13 @@ export default function OfertaPrograma() {
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
           Para cada asignatura de tu programa elige cuántos grupos se ofertarán (de 1 a {MAX_GRUPOS}) o
           marca <b>SIN OFERTAR</b>, y para cada grupo cuántos estudiantes tendrá (de 0 a {MAX_ESTUDIANTES}).
-          {" "}En Licenciatura en Química, las asignaturas de Saberes Específicos y Disciplinares y de
-          Práctica Pedagógica Investigativa también permiten repartir cada grupo en subgrupos por
-          docente (Docente 1 a Docente {MAX_SUBGRUPOS}), con cantidades de estudiantes distintas entre
-          sí. Al final de la página pulsa <b>Guardar</b>; puedes
-          volver a modificar y guardar cuantas veces lo necesites: el aplicativo de Asignación Docente se
-          actualiza al instante. Las asignaturas «Sin ofertar» o «Sin definir» no aparecen allí.
+          {" "}En Saberes Específicos y Disciplinares de Química, y en «Práctica Profesional» / «Práctica
+          Pedagógica Investigativa VI» de cualquier programa, también puedes repartir cada grupo entre
+          varios docentes (Docente 1 a Docente {MAX_SUBGRUPOS}), con cantidades de estudiantes distintas
+          entre sí, e indicar si será el mismo docente o docentes distintos. Al final de la página pulsa{" "}
+          <b>Guardar</b>; puedes volver a modificar y guardar cuantas veces lo necesites: el aplicativo de
+          Asignación Docente se actualiza al instante. Las asignaturas «Sin ofertar» o «Sin definir» no
+          aparecen allí.
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-sm">
           <span className="badge bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100">
@@ -281,7 +312,7 @@ export default function OfertaPrograma() {
                 </p>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
+                <table className="w-full min-w-[820px] text-left text-sm">
                   <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600 dark:bg-slate-700 dark:text-slate-200">
                     <tr>
                       <th className="px-5 py-3">Asignatura</th>
@@ -327,15 +358,16 @@ export default function OfertaPrograma() {
                             </select>
 
                             {n >= 1 && (
-                              <div className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2 dark:border-slate-700 dark:bg-slate-800/40">
+                              <div className="mt-2 space-y-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-700 dark:bg-slate-800/40">
                                 {Array.from({ length: n }, (_, i) => {
                                   const estGrupo = efectivo.estudiantes[i];
                                   const subGrupo = efectivo.subgrupos[i];
-                                  const sumaSub = subGrupo ? subGrupo.reduce((s, x) => s + (x.estudiantes || 0), 0) : 0;
+                                  const lista = subGrupo?.lista || [];
+                                  const sumaSub = lista.reduce((s, x) => s + (x.estudiantes || 0), 0);
                                   return (
-                                    <div key={i} className="space-y-1.5">
-                                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                                        <span className="w-16 shrink-0 font-semibold text-slate-600 dark:text-slate-300">
+                                    <div key={i} className="space-y-2">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="w-16 shrink-0 text-sm font-semibold text-slate-600 dark:text-slate-300">
                                           Grupo {i + 1}
                                         </span>
                                         <select
@@ -356,7 +388,7 @@ export default function OfertaPrograma() {
                                           <select
                                             aria-label={`Docentes del grupo ${i + 1} de ${f.asignatura}`}
                                             title="Repartir este grupo entre varios docentes"
-                                            value={String(subGrupo?.length || 0)}
+                                            value={String(lista.length || 0)}
                                             onChange={(e) => cambiarNumSubgrupos(f, i, Number(e.target.value))}
                                             className={CAMPO_SM}
                                           >
@@ -367,14 +399,30 @@ export default function OfertaPrograma() {
                                             ))}
                                           </select>
                                         )}
+
+                                        {conSubgrupos && lista.length > 0 && (
+                                          <select
+                                            aria-label={`¿Mismo docente en el grupo ${i + 1} de ${f.asignatura}?`}
+                                            title="¿El mismo docente dicta todos los subgrupos, o docentes distintos?"
+                                            value={subGrupo.mismoDocente ? "mismo" : "distintos"}
+                                            onChange={(e) => cambiarReparto(f, i, e.target.value === "mismo")}
+                                            className={CAMPO_SM}
+                                          >
+                                            {OPCIONES_REPARTO.map((o) => (
+                                              <option key={o.valor} value={o.valor}>
+                                                {o.etiqueta}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        )}
                                       </div>
 
-                                      {conSubgrupos && subGrupo && subGrupo.length > 0 && (
-                                        <div className="ml-[72px] flex flex-wrap items-center gap-1.5">
-                                          {subGrupo.map((sg, si) => (
+                                      {conSubgrupos && lista.length > 0 && (
+                                        <div className="ml-[72px] flex flex-wrap items-center gap-2">
+                                          {lista.map((sg, si) => (
                                             <label
                                               key={si}
-                                              className="flex items-center gap-1 rounded border border-institucional-navy/20 bg-white px-1.5 py-0.5 text-[11px] dark:border-institucional-gold/30 dark:bg-slate-900"
+                                              className="flex items-center gap-1.5 rounded-lg border border-institucional-navy/20 bg-white px-2.5 py-1.5 text-sm dark:border-institucional-gold/30 dark:bg-slate-900"
                                             >
                                               <span className="font-semibold text-institucional-navy dark:text-institucional-gold">
                                                 {sg.nombre}
@@ -383,7 +431,7 @@ export default function OfertaPrograma() {
                                                 aria-label={`Estudiantes de ${sg.nombre}, grupo ${i + 1} de ${f.asignatura}`}
                                                 value={sg.estudiantes == null ? "" : String(sg.estudiantes)}
                                                 onChange={(e) => cambiarSubgrupoEstudiantes(f, i, si, e.target.value)}
-                                                className="rounded border border-slate-300 bg-white px-1 py-0.5 text-[11px] dark:border-slate-600 dark:bg-slate-900"
+                                                className={CAMPO_DOCENTE}
                                               >
                                                 <option value="">—</option>
                                                 {Array.from({ length: MAX_ESTUDIANTES + 1 }, (_, k) => (
@@ -396,7 +444,7 @@ export default function OfertaPrograma() {
                                           ))}
                                           <span
                                             className={
-                                              "text-[11px] font-semibold " +
+                                              "text-sm font-semibold " +
                                               (estGrupo == null || sumaSub === estGrupo
                                                 ? "text-emerald-600 dark:text-emerald-400"
                                                 : "text-amber-600 dark:text-amber-400")
