@@ -69,8 +69,9 @@ function reparteParejo(total, n) {
 /**
  * Panel del director de programa para definir, por asignatura, cuántos grupos se ofertarán en
  * 2027-I, cuántos estudiantes tendrá cada grupo (0 a {MAX_ESTUDIANTES}) y, para las asignaturas de
- * Saberes Específicos y Disciplinares de Licenciatura en Química, en cuántos subgrupos por docente
- * (Docente 1..5) se reparte cada grupo. Las asignaturas vienen del formato de necesidades, agrupadas
+ * Saberes Específicos y Disciplinares y de Práctica Pedagógica Investigativa de Licenciatura en
+ * Química (ver admiteSubgrupos en services/oferta.js), en cuántos subgrupos por docente (Docente
+ * 1..5) se reparte cada grupo. Las asignaturas vienen del formato de necesidades, agrupadas
  * por ACUERDO ACADÉMICO (plan anterior y plan de transición). Lo que se guarda lo toma en tiempo real
  * el aplicativo de Asignación Docente (pestaña «Asignación docente» → vista «Asignación 2027-I»).
  */
@@ -230,9 +231,10 @@ export default function OfertaPrograma() {
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
           Para cada asignatura de tu programa elige cuántos grupos se ofertarán (de 1 a {MAX_GRUPOS}) o
           marca <b>SIN OFERTAR</b>, y para cada grupo cuántos estudiantes tendrá (de 0 a {MAX_ESTUDIANTES}).
-          {" "}En Licenciatura en Química, las asignaturas de Saberes Específicos y Disciplinares también
-          permiten repartir cada grupo en subgrupos por docente (Docente 1 a Docente {MAX_SUBGRUPOS}), con
-          cantidades de estudiantes distintas entre sí. Al final de la página pulsa <b>Guardar</b>; puedes
+          {" "}En Licenciatura en Química, las asignaturas de Saberes Específicos y Disciplinares y de
+          Práctica Pedagógica Investigativa también permiten repartir cada grupo en subgrupos por
+          docente (Docente 1 a Docente {MAX_SUBGRUPOS}), con cantidades de estudiantes distintas entre
+          sí. Al final de la página pulsa <b>Guardar</b>; puedes
           volver a modificar y guardar cuantas veces lo necesites: el aplicativo de Asignación Docente se
           actualiza al instante. Las asignaturas «Sin ofertar» o «Sin definir» no aparecen allí.
         </p>

@@ -13,9 +13,24 @@ export const MAX_GRUPOS = 10;
 export const MAX_ESTUDIANTES = 50;
 export const MAX_SUBGRUPOS = 5;
 
-/** Programa + componente para los que un grupo se puede repartir en subgrupos (Docente 1..5). */
+const sinTildes = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+/** Práctica Pedagógica Investigativa I..VI o Práctica Profesional (independiente del componente en el que venga). */
+function esPracticaInvestigativa(asignatura) {
+  const n = sinTildes(asignatura).toLowerCase().trim();
+  return /^practica pedagogica investigativa\b/.test(n) || /^practica profesional\b/.test(n);
+}
+
+/**
+ * Programa + asignatura para los que un grupo se puede repartir en subgrupos (Docente 1..5):
+ * en Licenciatura en Química, las de Saberes Específicos y Disciplinares y las de Práctica
+ * Pedagógica Investigativa (incluida «Práctica Profesional» del plan anterior). En el plan de
+ * transición estas últimas comparten componente con asignaturas de Didáctica que NO admiten
+ * subgrupos, por eso se filtra por el nombre de la asignatura y no solo por el componente.
+ */
 export function admiteSubgrupos(fila) {
-  return fila?.programaId === "quimica" && fila?.componente === "Saberes Específicos y Disciplinares";
+  if (fila?.programaId !== "quimica") return false;
+  return fila.componente === "Saberes Específicos y Disciplinares" || esPracticaInvestigativa(fila.asignatura);
 }
 
 /**
