@@ -159,6 +159,20 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
   );
 }
 
+/** Totales de estudiantes y docentes de una asignatura, sumando todos sus grupos. */
+function resumenGrupos(f) {
+  const n = f.grupos || 0;
+  if (!n) return null;
+  let doc = 0, est = 0, estDef = false;
+  for (let i = 0; i < n; i++) {
+    const sub = f.subgrupos && f.subgrupos[i];
+    doc += sub && Array.isArray(sub.lista) && sub.lista.length ? sub.lista.length : 1;
+    const e = f.estudiantes && f.estudiantes[i];
+    if (e != null) { est += e; estDef = true; }
+  }
+  return { grp: n, doc, est: estDef ? est : null };
+}
+
 function FilaPrograma({ p, pct, completo, iniciado, abierto, alternar, sesion, onPdf, onExcel }) {
   return (
     <>
@@ -211,18 +225,35 @@ function FilaPrograma({ p, pct, completo, iniciado, abierto, alternar, sesion, o
                 if (!lista.length) return null;
                 return (
                   <div key={plan}>
-                    <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                    <p className="mb-1 rounded-lg bg-institucional-navy px-3 py-2 text-sm font-bold uppercase tracking-wide text-white dark:bg-blue-900">
                       {lista[0].acuerdo}
                     </p>
-                    <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white text-sm dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800">
-                      {lista.map((f) => (
-                        <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-1.5">
-                          <span>{f.asignatura}</span>
-                          <span className={"shrink-0 font-semibold " + (f.grupos == null ? "text-orange-600" : f.grupos === 0 ? "text-slate-500" : "text-emerald-700 dark:text-emerald-400")}>
-                            {f.grupos == null ? "Por definir" : f.grupos === 0 ? "SIN OFERTAR" : f.grupos + (f.grupos === 1 ? " grupo" : " grupos")}
-                          </span>
-                        </li>
-                      ))}
+                    <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white text-base dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800">
+                      {lista.map((f) => {
+                        const r = resumenGrupos(f);
+                        return (
+                          <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                            <span>{f.asignatura}</span>
+                            {f.grupos == null ? (
+                              <span className="shrink-0 font-semibold text-orange-600">Por definir</span>
+                            ) : f.grupos === 0 ? (
+                              <span className="shrink-0 font-semibold text-slate-500">SIN OFERTAR</span>
+                            ) : (
+                              <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                                <span className="rounded-md bg-emerald-100 px-2 py-1 text-sm font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                  Grp {r.grp}
+                                </span>
+                                <span className="rounded-md bg-blue-100 px-2 py-1 text-sm font-bold text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                                  Est {r.est == null ? "—" : r.est}
+                                </span>
+                                <span className="rounded-md bg-purple-100 px-2 py-1 text-sm font-bold text-purple-800 dark:bg-purple-900/40 dark:text-purple-300">
+                                  Dte {r.doc}
+                                </span>
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 );
