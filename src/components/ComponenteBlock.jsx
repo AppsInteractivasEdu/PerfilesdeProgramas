@@ -221,7 +221,7 @@ export default function ComponenteBlock({
         {esAdmin || esObservador ? null : tipo === "idoneidad" ? null : !editandoSugerencia ? (
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-approve" onClick={() => onAprobar(revisorActivo)}>
-              ✓ Aprobar
+              ✓ De acuerdo
             </button>
             <button
               type="button"
@@ -231,7 +231,7 @@ export default function ComponenteBlock({
                 setEditandoSugerencia(true);
               }}
             >
-              ✎ Modificar
+              ✎ Proponer Ajustes
             </button>
           </div>
         ) : (

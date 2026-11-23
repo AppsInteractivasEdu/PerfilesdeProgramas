@@ -5,6 +5,7 @@ import {
   MAX_GRUPOS,
   MAX_SUBGRUPOS,
   admiteSubgrupos,
+  esComponenteDPD,
   guardarOferta,
   suscribirOfertaPorPrograma,
 } from "../services/oferta.js";
@@ -45,6 +46,11 @@ const OPCIONES_REPARTO = [
 const OPCIONES_COMPACTO = [
   { valor: "repartido", etiqueta: "Estudiantes repartidos" },
   { valor: "compacto", etiqueta: "Grupo compacto (mismos estudiantes)" },
+];
+
+const OPCIONES_VISTA = [
+  { valor: "todas", etiqueta: "Todas las asignaturas" },
+  { valor: "dpd", etiqueta: "Solo Pedagogía y Didáctica" },
 ];
 
 const aTexto = (grupos) => (grupos == null ? "" : String(grupos));
@@ -100,6 +106,7 @@ function listaDocentes(total, n, mismoDocente, compacto) {
 export default function OfertaPrograma() {
   const { perfil, usuarioFirebase } = useAuth();
   const [filas, setFilas] = useState([]);
+  const [vista, setVista] = useState("todas");
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState("");
   const [borrador, setBorrador] = useState({}); // { [id]: { grupos, estudiantes:[], subgrupos:[] } } solo lo que difiere de lo guardado
@@ -145,25 +152,33 @@ export default function OfertaPrograma() {
     return () => window.removeEventListener("beforeunload", avisar);
   }, [pendientes]);
 
+  // El filtro "Solo Pedagogía y Didáctica" deja fuera los componentes de otros departamentos
+  // (Fundamentación, Saberes Específicos y Disciplinares, Electivas, Segunda Lengua, etc.); "Todas
+  // las asignaturas" es la vista de siempre, con el plan de estudios completo.
+  const filasVisibles = useMemo(
+    () => (vista === "dpd" ? filas.filter((f) => esComponenteDPD(f.componente)) : filas),
+    [filas, vista]
+  );
+
   const secciones = useMemo(() => {
     const mapa = new Map();
-    for (const f of filas) {
+    for (const f of filasVisibles) {
       const k = `${f.plan}|${f.acuerdo}`;
       if (!mapa.has(k)) mapa.set(k, { plan: f.plan, acuerdo: f.acuerdo, filas: [] });
       mapa.get(k).filas.push(f);
     }
     return [...mapa.values()];
-  }, [filas]);
+  }, [filasVisibles]);
 
   const resumen = useMemo(() => {
     let definidas = 0, ofertadas = 0, grupos = 0;
-    for (const f of filas) {
+    for (const f of filasVisibles) {
       const v = efectivoDe(f, borrador).grupos;
       if (v !== "") definidas++;
       if (v !== "" && v !== "0") { ofertadas++; grupos += Number(v); }
     }
-    return { definidas, ofertadas, grupos, total: filas.length };
-  }, [filas, borrador]);
+    return { definidas, ofertadas, grupos, total: filasVisibles.length };
+  }, [filasVisibles, borrador]);
 
   /** Guarda en `borrador` el nuevo estado efectivo de una fila; si vuelve a coincidir con lo guardado, lo quita. */
   const actualizarFila = (f, nuevo) => {
@@ -295,6 +310,23 @@ export default function OfertaPrograma() {
           Asignación Docente se actualiza al instante. Las asignaturas «Sin ofertar» o «Sin definir» no
           aparecen allí.
         </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <label className="field-label shrink-0" htmlFor="oferta-vista">
+            Ver
+          </label>
+          <select
+            id="oferta-vista"
+            value={vista}
+            onChange={(e) => setVista(e.target.value)}
+            className={CAMPO_SM}
+          >
+            {OPCIONES_VISTA.map((o) => (
+              <option key={o.valor} value={o.valor}>
+                {o.etiqueta}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="mt-3 flex flex-wrap gap-2 text-sm">
           <span className="badge bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100">
             Definidas: {resumen.definidas} de {resumen.total}
@@ -321,6 +353,11 @@ export default function OfertaPrograma() {
         <div className="card p-5 text-sm text-slate-600 dark:text-slate-300">
           Todavía no se han cargado las asignaturas de la oferta 2027-I para tu programa. Avísale al
           Director de Departamento.
+        </div>
+      ) : filasVisibles.length === 0 ? (
+        <div className="card p-5 text-sm text-slate-600 dark:text-slate-300">
+          Ninguna asignatura de tu programa pertenece a los componentes del Departamento de
+          Pedagogía y Didáctica. Cambia el filtro «Ver» a «Todas las asignaturas».
         </div>
       ) : (
         secciones.map((s) => {

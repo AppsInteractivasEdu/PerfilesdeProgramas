@@ -3,6 +3,8 @@ import { useAuth } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import AsignaturaCard from "../components/AsignaturaCard.jsx";
 import OfertaPrograma from "../components/OfertaPrograma.jsx";
+import PreguntasFrecuentes from "../components/PreguntasFrecuentes.jsx";
+import BienvenidaModal, { useBienvenida } from "../components/BienvenidaModal.jsx";
 import { suscribirAsignaturasPorPrograma } from "../services/asignaturas.js";
 import { ESTADO_REVISOR, listarComponentes } from "../utils/constantes.js";
 import { exportarPdfDirector } from "../utils/exportPdf.js";
@@ -10,7 +12,55 @@ import { exportarPdfDirector } from "../utils/exportPdf.js";
 const PESTANAS = [
   { id: "oferta", titulo: "Oferta de grupos 2027-I" },
   { id: "perfiles", titulo: "Revisión de perfiles docentes" },
+  { id: "ayuda", titulo: "Preguntas frecuentes" },
 ];
+
+/** Qué se hace en cada pestaña, para el diálogo de bienvenida (solo oferta y perfiles lo necesitan). */
+const BIENVENIDA = {
+  oferta: {
+    titulo: "Oferta de grupos 2027-I",
+    cuerpo: (
+      <>
+        <p>
+          Aquí define, para cada asignatura de su programa, cuántos grupos se van a
+          ofrecer en el periodo 2027-I y cuántos estudiantes tendrá cada grupo.
+        </p>
+        <p>
+          En las asignaturas que lo permiten también puede repartir un grupo entre
+          varios docentes (subgrupos). Esta información alimenta directamente al
+          aplicativo de Asignación Docente, así que mantenerla al día es importante.
+        </p>
+      </>
+    ),
+  },
+  perfiles: {
+    titulo: "Revisión de perfiles docentes",
+    cuerpo: (
+      <>
+        <p>
+          Aquí revisa el perfil docente (pregrado, posgrado, experiencia y
+          competencias) ya redactado para cada asignatura de su programa.
+        </p>
+        <p>
+          Por cada componente puede marcar <b>«De acuerdo»</b> si está bien como está,
+          o <b>«Proponer Ajustes»</b> para enviar una sugerencia, con comentario, al
+          Director de Departamento.
+        </p>
+      </>
+    ),
+  },
+};
+
+function BienvenidaPestana({ clave }) {
+  const info = BIENVENIDA[clave];
+  const [mostrar, cerrar] = useBienvenida(info ? `director-${clave}` : null);
+  if (!info || !mostrar) return null;
+  return (
+    <BienvenidaModal titulo={info.titulo} onCerrar={cerrar}>
+      {info.cuerpo}
+    </BienvenidaModal>
+  );
+}
 
 export default function DirectorDashboard() {
   const { perfil } = useAuth();
@@ -62,6 +112,7 @@ export default function DirectorDashboard() {
   return (
     <div className="min-h-screen bg-slate-300 dark:bg-slate-950">
       <Navbar titulo={perfil?.nombrePrograma} subtitulo="Panel del director de programa" />
+      <BienvenidaPestana clave={vista} />
 
       <main className="mx-auto w-full max-w-[2400px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <div role="tablist" aria-label="Secciones del panel" className="flex flex-wrap gap-2">
@@ -86,6 +137,8 @@ export default function DirectorDashboard() {
 
         {vista === "oferta" ? (
           <OfertaPrograma />
+        ) : vista === "ayuda" ? (
+          <PreguntasFrecuentes />
         ) : (
           <>
         <div className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -94,8 +147,8 @@ export default function DirectorDashboard() {
               Revisión de perfiles docentes
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Aprueba cada componente o sugiere una modificación. Solo las
-              asignaturas con sugerencias se incluyen en el reporte descargable.
+              Marque «De acuerdo» en cada componente o proponga un ajuste. Solo las
+              asignaturas con ajustes propuestos se incluyen en el reporte descargable.
             </p>
           </div>
           <button

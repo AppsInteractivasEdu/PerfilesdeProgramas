@@ -90,8 +90,8 @@ export default function DepartamentoDashboard() {
               Revisión de asignaturas asignadas al departamento
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {asignaturas.length} asignaturas en {programasDisponibles.length} programa(s). Aprueba
-              cada componente o sugiere una modificación; tu revisión es independiente de la del
+              {asignaturas.length} asignaturas en {programasDisponibles.length} programa(s). Marca «De
+              acuerdo» en cada componente o propón un ajuste; tu revisión es independiente de la del
               director de cada programa y queda a la espera de la aprobación del Director de
               Departamento.
             </p>

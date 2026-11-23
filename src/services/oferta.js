@@ -30,6 +30,25 @@ export function admiteSubgrupos() {
 }
 
 /**
+ * ¿El texto de "componente" (columna D del formato de necesidades) es uno de los tres
+ * componentes propios del Departamento de Pedagogía y Didáctica (Pedagógico, Didáctica de las
+ * Disciplinas o Práctica Pedagógica Investigativa, en cualquiera de sus dos planes)? Se usa para
+ * el filtro "Solo Pedagogía y Didáctica" de la oferta: sin él se ven también las asignaturas de
+ * otros componentes del plan (Fundamentación, Saberes Específicos y Disciplinares, Electivas de
+ * Profundización, Segunda Lengua, etc.), que no corresponden a este departamento.
+ * Misma regla de clasificación que usa js/engine.js (clasificar) en el aplicativo de Asignación
+ * Docente, simplificada aquí a un sí/no sobre el texto ya guardado en `componente`.
+ */
+export function esComponenteDPD(componente) {
+  const c = String(componente || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+  return c.includes("didactica") || c.includes("practica pedagogica") || c === "pedagogico" || c === "componente pedagogico";
+}
+
+/**
  * Suscribe en tiempo real a las asignaturas de la oferta 2027-I de un programa.
  * cb recibe la lista ordenada como en el formato de necesidades (por acuerdo y por orden).
  */
