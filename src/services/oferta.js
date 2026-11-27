@@ -32,10 +32,10 @@ export function admiteSubgrupos() {
 /**
  * ¿El texto de "componente" (columna D del formato de necesidades) es uno de los tres
  * componentes propios del Departamento de Pedagogía y Didáctica (Pedagógico, Didáctica de las
- * Disciplinas o Práctica Pedagógica Investigativa, en cualquiera de sus dos planes)? Se usa para
- * el filtro "Solo Pedagogía y Didáctica" de la oferta: sin él se ven también las asignaturas de
- * otros componentes del plan (Fundamentación, Saberes Específicos y Disciplinares, Electivas de
- * Profundización, Segunda Lengua, etc.), que no corresponden a este departamento.
+ * Disciplinas o Práctica Pedagógica Investigativa, en cualquiera de sus dos planes)? El director de
+ * programa solo ve estas en la oferta; las de otros componentes del plan (Fundamentación, Saberes
+ * Específicos y Disciplinares, Electivas de Profundización, Segunda Lengua, etc.) no corresponden a
+ * este departamento y quedan ocultas.
  * Misma regla de clasificación que usa js/engine.js (clasificar) en el aplicativo de Asignación
  * Docente, simplificada aquí a un sí/no sobre el texto ya guardado en `componente`.
  */

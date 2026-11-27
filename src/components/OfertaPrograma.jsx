@@ -48,11 +48,6 @@ const OPCIONES_COMPACTO = [
   { valor: "compacto", etiqueta: "Grupo compacto (mismos estudiantes)" },
 ];
 
-const OPCIONES_VISTA = [
-  { valor: "todas", etiqueta: "Todas las asignaturas" },
-  { valor: "dpd", etiqueta: "Solo Pedagogía y Didáctica" },
-];
-
 const aTexto = (grupos) => (grupos == null ? "" : String(grupos));
 const aValor = (texto) => (texto === "" ? null : Number(texto));
 const numDeTexto = (texto) => (texto === "" ? 0 : Number(texto) || 0);
@@ -93,20 +88,18 @@ function listaDocentes(total, n, mismoDocente, compacto) {
 
 /**
  * Panel del director de programa para definir, por asignatura, cuántos grupos se ofertarán en
- * 2027-I, cuántos estudiantes tendrá cada grupo (0 a {MAX_ESTUDIANTES}) y, en cualquier asignatura
- * de cualquier programa, en cuántos subgrupos por docente (Docente 1..5) se reparte cada grupo, si
- * esos subgrupos los dicta el mismo docente o docentes distintos, y si los estudiantes se reparten
- * entre ellos o el grupo se mantiene compacto. Las asignaturas vienen del formato de necesidades,
- * agrupadas por ACUERDO ACADÉMICO (plan anterior y plan de transición). Lo que se guarda lo toma en
- * tiempo real el aplicativo de Asignación Docente (pestaña «Asignación docente» → vista «Asignación
- * 2027-I») — allí el efecto solo se ve en las asignaturas de sus tres componentes (Pedagógico,
- * Didáctica de las Disciplinas, Práctica Pedagógica Investigativa), que es lo único que ese
- * aplicativo asigna.
+ * 2027-I, cuántos estudiantes tendrá cada grupo (0 a {MAX_ESTUDIANTES}) y en cuántos subgrupos por
+ * docente (Docente 1..5) se reparte cada grupo, si esos subgrupos los dicta el mismo docente o
+ * docentes distintos, y si los estudiantes se reparten entre ellos o el grupo se mantiene compacto.
+ * Las asignaturas vienen del formato de necesidades, agrupadas por ACUERDO ACADÉMICO (plan anterior
+ * y plan de transición). El director de programa solo ve (y descarga) las de los componentes del
+ * Departamento de Pedagogía y Didáctica (Pedagógico, Didáctica de las Disciplinas, Práctica
+ * Pedagógica Investigativa); las demás quedan ocultas. Lo que se guarda lo toma en tiempo real el
+ * aplicativo de Asignación Docente (pestaña «Asignación docente» → vista «Asignación 2027-I»).
  */
 export default function OfertaPrograma() {
   const { perfil, usuarioFirebase } = useAuth();
   const [filas, setFilas] = useState([]);
-  const [vista, setVista] = useState("todas");
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState("");
   const [borrador, setBorrador] = useState({}); // { [id]: { grupos, estudiantes:[], subgrupos:[] } } solo lo que difiere de lo guardado
@@ -152,13 +145,9 @@ export default function OfertaPrograma() {
     return () => window.removeEventListener("beforeunload", avisar);
   }, [pendientes]);
 
-  // El filtro "Solo Pedagogía y Didáctica" deja fuera los componentes de otros departamentos
-  // (Fundamentación, Saberes Específicos y Disciplinares, Electivas, Segunda Lengua, etc.); "Todas
-  // las asignaturas" es la vista de siempre, con el plan de estudios completo.
-  const filasVisibles = useMemo(
-    () => (vista === "dpd" ? filas.filter((f) => esComponenteDPD(f.componente)) : filas),
-    [filas, vista]
-  );
+  // Los componentes de otros departamentos (Fundamentación, Saberes Específicos y Disciplinares,
+  // Electivas, Segunda Lengua, etc.) quedan ocultos para el director de programa.
+  const filasVisibles = useMemo(() => filas.filter((f) => esComponenteDPD(f.componente)), [filas]);
 
   const secciones = useMemo(() => {
     const mapa = new Map();
@@ -259,10 +248,10 @@ export default function OfertaPrograma() {
   const slugPrograma = nombrePrograma.replace(/[^a-z0-9]/gi, "_").toLowerCase();
 
   const descargarPdf = () => {
-    exportarPdfOfertaPrograma(nombrePrograma, filas, `Oferta_2027-I_${slugPrograma}.pdf`);
+    exportarPdfOfertaPrograma(nombrePrograma, filasVisibles, `Oferta_2027-I_${slugPrograma}.pdf`);
   };
   const descargarExcel = () => {
-    exportarExcelOfertaPrograma(nombrePrograma, filas, `Oferta_2027-I_${slugPrograma}.xlsx`).catch(console.error);
+    exportarExcelOfertaPrograma(nombrePrograma, filasVisibles, `Oferta_2027-I_${slugPrograma}.xlsx`).catch(console.error);
   };
 
   const guardar = async () => {
@@ -298,36 +287,19 @@ export default function OfertaPrograma() {
           Oferta de grupos · vigencia 2027-I
         </h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Para cada asignatura de tu programa elige cuántos grupos se ofertarán (de 1 a {MAX_GRUPOS}) o
-          marca <b>SIN OFERTAR</b>, y para cada grupo cuántos estudiantes tendrá (de 0 a {MAX_ESTUDIANTES}).
-          {" "}En cualquier asignatura también puedes repartir cada grupo entre varios docentes (Docente 1 a
-          Docente {MAX_SUBGRUPOS}), indicar si será el mismo docente o docentes distintos, y si los
-          estudiantes se reparten entre ellos o el grupo se mantiene compacto (todos dictan al mismo total
-          de estudiantes) — el aplicativo de Asignación Docente solo refleja esto en las asignaturas de sus
-          tres componentes (Pedagógico, Didáctica de las Disciplinas, Práctica Pedagógica Investigativa).
+          Para cada asignatura de tu programa que pertenece al Departamento de Pedagogía y Didáctica
+          (componentes Pedagógico, Didáctica de las Disciplinas y Práctica Pedagógica Investigativa)
+          elige cuántos grupos se ofertarán (de 1 a {MAX_GRUPOS}) o marca <b>SIN OFERTAR</b>, y para
+          cada grupo cuántos estudiantes tendrá (de 0 a {MAX_ESTUDIANTES}). También puedes repartir cada
+          grupo entre varios docentes (Docente 1 a Docente {MAX_SUBGRUPOS}), indicar si será el mismo
+          docente o docentes distintos, y si los estudiantes se reparten entre ellos o el grupo se
+          mantiene compacto (todos dictan al mismo total de estudiantes).
           Al final de la página pulsa{" "}
           <b>Guardar</b>; puedes volver a modificar y guardar cuantas veces lo necesites: el aplicativo de
           Asignación Docente se actualiza al instante. Las asignaturas «Sin ofertar» o «Sin definir» no
           aparecen allí.
         </p>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <label className="field-label shrink-0" htmlFor="oferta-vista">
-            Ver
-          </label>
-          <select
-            id="oferta-vista"
-            value={vista}
-            onChange={(e) => setVista(e.target.value)}
-            className={CAMPO_SM}
-          >
-            {OPCIONES_VISTA.map((o) => (
-              <option key={o.valor} value={o.valor}>
-                {o.etiqueta}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+        <div className="mt-4 flex flex-wrap gap-2 text-sm">
           <span className="badge bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100">
             Definidas: {resumen.definidas} de {resumen.total}
           </span>
@@ -357,7 +329,7 @@ export default function OfertaPrograma() {
       ) : filasVisibles.length === 0 ? (
         <div className="card p-5 text-sm text-slate-600 dark:text-slate-300">
           Ninguna asignatura de tu programa pertenece a los componentes del Departamento de
-          Pedagogía y Didáctica. Cambia el filtro «Ver» a «Todas las asignaturas».
+          Pedagogía y Didáctica. Si crees que falta alguna, avísale al Director de Departamento.
         </div>
       ) : (
         secciones.map((s) => {
@@ -558,7 +530,7 @@ export default function OfertaPrograma() {
         })
       )}
 
-      {filas.length > 0 && (
+      {filasVisibles.length > 0 && (
         <div className="sticky bottom-4 z-10">
           <div className="card flex flex-col gap-3 border-2 border-institucional-navy p-4 shadow-lg dark:border-institucional-gold sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm">
