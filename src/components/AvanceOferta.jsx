@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { suscribirOfertaTodas } from "../services/oferta.js";
+import { esComponenteDPD, suscribirOfertaTodas } from "../services/oferta.js";
 import { formatearUltimaConexion } from "../utils/tiempo.js";
 import { exportarExcelOfertaPrograma, exportarExcelOfertaCompleta } from "../utils/exportExcel.js";
 import { exportarPdfOfertaPrograma, exportarPdfOfertaCompleta } from "../utils/exportPdf.js";
@@ -7,9 +7,11 @@ import { exportarPdfOfertaPrograma, exportarPdfOfertaCompleta } from "../utils/e
 const aMs = (t) => (t?.toMillis ? t.toMillis() : typeof t === "number" ? t : t ? Date.parse(t) || 0 : 0);
 
 /**
- * Para el Director de Departamento: cuánto ha avanzado cada director de programa en definir la
- * oferta de grupos 2027-I. Solo lectura. directorPorPrograma (opcional): Map(programaId -> usuario)
- * para mostrar la última sesión de cada director.
+ * Para el Director de Departamento, el Decano y Vicerrectoría: cuánto ha avanzado cada director de
+ * programa en definir la oferta de grupos 2027-I. Solo lectura. Cuenta, muestra y descarga
+ * únicamente las asignaturas del Departamento de Pedagogía y Didáctica (las mismas que ve cada
+ * director de programa). directorPorPrograma (opcional): Map(programaId -> usuario) para mostrar
+ * la última sesión de cada director.
  */
 export default function AvanceOferta({ directorPorPrograma = new Map() }) {
   const [filas, setFilas] = useState([]);
@@ -34,7 +36,7 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
     () =>
       suscribirOfertaTodas(
         (lista) => {
-          setFilas(lista);
+          setFilas(lista.filter((f) => esComponenteDPD(f.componente)));
           setCargando(false);
           setError("");
         },
@@ -82,8 +84,9 @@ export default function AvanceOferta({ directorPorPrograma = new Map() }) {
           Avance de la oferta 2027-I por programa
         </h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Aquí ves en tiempo real cuántas asignaturas ha definido cada director de programa (grupos a
-          ofertar o SIN OFERTAR). Lo que está «por definir» aún no aparece en Asignación Docente.
+          Aquí ves en tiempo real cuántas asignaturas del Departamento de Pedagogía y Didáctica ha
+          definido cada director de programa (grupos a ofertar o SIN OFERTAR). Lo que está «por
+          definir» aún no aparece en Asignación Docente.
         </p>
         {!cargando && !error && programas.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
